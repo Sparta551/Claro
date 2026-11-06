@@ -6,16 +6,16 @@
 <title>CLARO NEXUS · Consola de configuración</title>
 <style>
 :root{
-  --bg:#0a0d13;
-  --bg-soft:#0f131b;
-  --panel:#141a24;
-  --panel-2:#18202c;
-  --border:#242e3d;
-  --border-strong:#324054;
-  --text:#e9eef6;
-  --muted:#8b98ab;
-  --muted-2:#637086;
-  --red:#e32b2b;
+  --bg:#f0f0f0;
+  --bg-soft:#fafafa;
+  --panel:#ffffff;
+  --panel-2:#f7f7f7;
+  --border:#dedede;
+  --border-strong:#c9c9c9;
+  --text:#161616;
+  --muted:#626262;
+  --muted-2:#858585;
+  --red:#ee2a26;
   --red-soft:rgba(227,43,43,.14);
   --red-glow:rgba(227,43,43,.35);
   --green:#22c55e;
@@ -33,8 +33,7 @@
 html,body{margin:0;padding:0}
 body{
   background:
-    radial-gradient(900px 420px at 12% -8%, rgba(227,43,43,.16), transparent 60%),
-    radial-gradient(760px 380px at 96% 0%, rgba(79,140,255,.10), transparent 55%),
+    radial-gradient(900px 420px at 12% -8%, rgba(238,42,38,.055), transparent 60%),
     var(--bg);
   color:var(--text);
   font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
@@ -56,13 +55,35 @@ a{color:var(--blue)}
 }
 .brand{display:flex;align-items:center;gap:12px;min-width:280px}
 .logo{
-  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
-  background:linear-gradient(145deg,#ff4949,#b81010);
-  box-shadow:0 8px 22px var(--red-glow);
-  font-weight:800;font-size:19px;letter-spacing:-.5px;
+  width:44px;
+  height:44px;
+  border-radius:8px;
+  display:grid;
+  place-items:center;
+  background:#ee2a26;
+  color:#ffffff;
+  font-size:25px;
+  font-weight:800;
+  letter-spacing:-1px;
+  box-shadow:none;
+  flex-shrink:0;
 }
-.brand h1{margin:0;font-size:17px;letter-spacing:.14em;font-weight:700}
-.brand p{margin:1px 0 0;color:var(--muted);font-size:11.5px;letter-spacing:.02em}
+
+.brand h1{
+  margin:0;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:-.02em;
+  line-height:1.15;
+  color:#161616;
+}
+.brand p{
+  margin:3px 0 0;
+  color:#737373;
+  font-size:11.5px;
+  font-weight:400;
+  letter-spacing:.01em;
+}
 .top-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
 .chip{
   display:inline-flex;align-items:center;gap:7px;
@@ -88,22 +109,27 @@ a{color:var(--blue)}
 .btn:active{transform:translateY(0)}
 .btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 .btn.primary{
-  background:linear-gradient(145deg,#f03b3b,#c21717);
-  border-color:#f25656;box-shadow:0 8px 22px rgba(227,43,43,.25);color:#fff;
+  background:#ee2a26;
+  border:1px solid #ee2a26;
+  color:#ffffff;
+  border-radius:8px;
+  box-shadow:none;
+  font-weight:700;
 }
-.btn.primary:hover{background:linear-gradient(145deg,#ff4a4a,#d21a1a)}
-.btn.ghost{background:transparent;border-color:var(--border)}
-.btn.ghost:hover{background:var(--panel)}
-.btn.small{padding:6px 10px;font-size:12px;border-radius:8px}
-.btn.danger{color:#ff9c9c;border-color:rgba(227,43,43,.4);background:var(--red-soft)}
-.btn.icon{padding:6px 9px;border-radius:8px;line-height:1}
-
+.btn.primary:hover{
+  background:#d92320;
+  border-color:#d92320;
+}
 /* ---------- cabecera fija ---------- */
 .head{
-  position:sticky;top:0;z-index:30;
-  background:rgba(10,13,19,.9);
+  position:sticky;
+  top:0;
+  z-index:30;
+  background:rgba(255,255,255,.96);
   backdrop-filter:blur(14px);
-  border-bottom:1px solid var(--border);
+  border-top:4px solid #ee2a26;
+  border-bottom:1px solid #e5e5e5;
+  box-shadow:0 4px 20px rgba(22,22,22,.045);
 }
 /* ---------- tabs ---------- */
 .tabs{
@@ -116,10 +142,17 @@ a{color:var(--blue)}
   border-bottom:2px solid transparent;white-space:nowrap;
 }
 .tab:hover{color:var(--text)}
-.tab.active{color:#fff;border-bottom-color:var(--red)}
-.tab .count{
-  display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;
-  background:var(--panel-2);border:1px solid var(--border);font-size:10.5px;color:var(--muted);
+
+.tab.active{
+  color:#ee2a26;
+  border-bottom:3px solid #ee2a26;
+  background:transparent;
+}
+
+.tab.active .count{
+  background:#fff0ef;
+  color:#c9211e;
+  border-color:#f5d0ce;
 }
 .tab.active .count{background:var(--red-soft);border-color:rgba(227,43,43,.4);color:#ffb3b3}
 
@@ -133,9 +166,11 @@ main{padding:24px 26px 60px;max-width:1500px;margin:0 auto}
 .section-head p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:760px}
 .section-head .spacer{flex:1}
 .panel{
-  background:linear-gradient(180deg,var(--panel),var(--bg-soft));
-  border:1px solid var(--border);border-radius:var(--radius);
-  box-shadow:var(--shadow);padding:18px;
+  background:#ffffff;
+  border:1px solid #e4e4e4;
+  border-radius:12px;
+  box-shadow:0 4px 18px rgba(22,22,22,.035);
+  padding:20px;
 }
 .panel + .panel{margin-top:16px}
 .panel-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
@@ -159,12 +194,21 @@ main{padding:24px 26px 60px;max-width:1500px;margin:0 auto}
 .dataset:hover{border-color:var(--border-strong)}
 .dataset.active{border-color:var(--red);background:var(--red-soft);box-shadow:inset 0 0 0 1px rgba(227,43,43,.25)}
 .dataset:disabled{opacity:.42;cursor:not-allowed}
+
 .input,select.input,textarea.input{
-  width:100%;background:#0d121a;border:1px solid var(--border-strong);border-radius:9px;
-  padding:9px 11px;outline:none;transition:border-color .12s,box-shadow .12s;
+  width:100%;
+  background:#ffffff;
+  color:#161616;
+  border:1px solid #d5d5d5;
+  border-radius:8px;
+  padding:9px 11px;
+  outline:none;
+  transition:border-color .15s,box-shadow .15s;
 }
+
 .input:focus,select.input:focus,textarea.input:focus{
-  border-color:#5b7ba6;box-shadow:0 0 0 3px rgba(79,140,255,.13);
+  border-color:#ee2a26;
+  box-shadow:0 0 0 3px rgba(238,42,38,.10);
 }
 .input::placeholder{color:var(--muted-2)}
 .run-meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px;color:var(--muted);font-size:12px}
@@ -176,29 +220,57 @@ main{padding:24px 26px 60px;max-width:1500px;margin:0 auto}
 @media (max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}}
 @media (max-width:560px){.metrics{grid-template-columns:1fr}}
 .metric{
-  position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--border);
-  border-radius:13px;padding:14px 15px 13px;
+  position:relative;
+  overflow:hidden;
+  background:#ffffff;
+  border:1px solid #e4e4e4;
+  border-radius:12px;
+  padding:18px;
 }
 .metric:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--blue);opacity:.7}
 .metric.good:before{background:var(--green)}
 .metric.warn:before{background:var(--amber)}
 .metric.bad:before{background:var(--red)}
 .metric .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
-.metric .v{font-size:25px;font-weight:750;letter-spacing:-.02em;margin-top:5px;font-variant-numeric:tabular-nums}
+.metric .v{
+  color:#161616;
+  font-size:29px;
+  font-weight:800;
+  letter-spacing:-.035em;
+  margin-top:7px;
+  font-variant-numeric:tabular-nums;
+}
 .metric .s{color:var(--muted-2);font-size:11px;margin-top:2px}
 .metric .v small{font-size:13px;font-weight:600;color:var(--muted)}
 
 /* ---------- tables ---------- */
 .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;max-height:430px}
 table{width:100%;border-collapse:collapse;font-size:12.5px}
+
 th{
-  position:sticky;top:0;z-index:2;text-align:left;background:#111823;
-  color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
-  padding:9px 11px;border-bottom:1px solid var(--border);white-space:nowrap;
+  position:sticky;
+  top:0;
+  z-index:2;
+  text-align:left;
+  background:#f7f7f7;
+  color:#626262;
+  font-size:11px;
+  font-weight:700;
+  padding:11px 13px;
+  border-bottom:1px solid #e5e5e5;
+  white-space:nowrap;
 }
-td{padding:8px 11px;border-bottom:1px solid rgba(36,46,61,.65);vertical-align:top}
-tr:last-child td{border-bottom:0}
-tbody tr:hover{background:rgba(79,140,255,.045)}
+
+td{
+  padding:11px 13px;
+  color:#161616;
+  border-bottom:1px solid #ededed;
+  vertical-align:top;
+}
+
+tbody tr:hover{
+  background:#fff5f4;
+}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 td.trunc{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.02em;border:1px solid transparent}
@@ -306,14 +378,103 @@ footer{padding:0 26px 30px;color:var(--muted-2);font-size:11.5px;text-align:cent
 footer b{color:var(--muted)}
 kbd{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border:1px solid var(--border-strong);border-radius:5px;background:var(--panel-2);color:var(--muted)}
 .scroll-hint{color:var(--muted-2);font-size:11px;margin-top:7px}
+
+/* ======================================================================
+   Paleta clara: reglas que faltaban y ajustes de legibilidad sobre fondo blanco
+   ====================================================================== */
+:root{
+  --red-dark:#c9211e;
+  --green-text:#15803d;
+  --amber-text:#b45309;
+  --blue-text:#1d4ed8;
+  --shadow:0 18px 46px rgba(22,22,22,.14);
+}
+.entity-fields input[type=date]{color-scheme:light}
+
+/* botones */
+.btn:hover{border-color:#b5b5b5;background:#efefef}
+.btn.primary:hover{background:#d92320;border-color:#d92320}
+.btn.ghost{background:transparent;border-color:var(--border)}
+.btn.ghost:hover{background:#f5f5f5;border-color:var(--border-strong)}
+.btn.small{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn.danger{color:var(--red-dark);border-color:#f5d0ce;background:#fff0ef}
+.btn.danger:hover{background:#ffe3e1;border-color:#ee2a26}
+.btn.icon{padding:6px 9px;border-radius:8px;line-height:1}
+
+/* pestañas */
+.tab .count{
+  display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;
+  background:var(--panel-2);border:1px solid var(--border);font-size:10.5px;color:var(--muted);
+}
+.tab.active .count{background:#fff0ef;color:var(--red-dark);border-color:#f5d0ce}
+
+/* chips, etiquetas y alertas con texto legible */
+.chip.dirty{border-color:rgba(245,165,36,.5);color:var(--amber-text);background:#fff7e8}
+.tag.green{background:#ecfdf3;color:var(--green-text);border-color:#bbe7cb}
+.tag.amber{background:#fff7e8;color:var(--amber-text);border-color:#f6d9a6}
+.tag.red{background:#fff0ef;color:var(--red-dark);border-color:#f5d0ce}
+.tag.blue{background:#eef4ff;color:var(--blue-text);border-color:#c9d9fb}
+.alert.success{background:#ecfdf3;border-color:#bbe7cb;color:var(--green-text)}
+.alert.warn{background:#fff7e8;border-color:#f6d9a6;color:var(--amber-text)}
+.alert.error{background:#fff0ef;border-color:#f5d0ce;color:var(--red-dark)}
+.aviso{color:var(--amber-text)}
+.entity-head{background:#fafafa}
+.entity-head .badge{background:#fff0ef;border-color:#f5d0ce;color:var(--red-dark)}
+.entity.dim .entity-head{background:#f7f7f7}
+
+/* tablas y barras */
+tr:last-child td{border-bottom:0}
+.bar{background:#ececec}
+.bar span{background:linear-gradient(90deg,#ee2a26,#ff6b5e)}
+.bar.hot span{background:linear-gradient(90deg,#f5a524,#c9211e)}
+
+/* interruptor */
+.switch input{background:#e2e2e2;border-color:#cfcfcf}
+.switch input:after{background:#ffffff;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch input:checked{background:#22c55e;border-color:#1fae53}
+.switch input:checked:after{background:#ffffff}
+
+/* parámetros */
+.param-group .panel-title h3{color:#444444}
+.param-row{border-bottom:1px dashed #e2e2e2}
+.param-row .name{color:#2b2b2b}
+.param-row.changed .name{color:var(--amber-text)}
+
+/* overlay, modal y toasts */
+.overlay{background:rgba(22,22,22,.35)}
+.modal{background:rgba(22,22,22,.35)}
+.spinner{border-color:#ececec;border-top-color:var(--red)}
+.toast{background:#ffffff;color:var(--text)}
+
+/* canales permitidos (campañas) */
+.canales-box{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.entity-fields label.canal-chip,.canal-chip{display:inline-flex;margin:0;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:#ffffff;cursor:pointer;user-select:none;color:var(--muted);text-transform:none;letter-spacing:0;font-weight:600;font-size:12px}
+.canal-chip input{margin:0;accent-color:#ee2a26}
+.entity-fields label.canal-chip.on,.canal-chip.on{background:#fff0ef;border-color:#f5d0ce;color:var(--red-dark)}
+.entity-fields label.canal-chip.warn,.canal-chip.warn{border-color:#f6d9a6;background:#fff7e8;color:var(--amber-text)}
+.canales-box .canal-nuevo{padding:3px 9px;font-size:11.5px;border-radius:999px}
+
+/* atributo de reglas */
+.col-info{margin-top:4px;font-size:11px;color:var(--muted-2);min-height:14px;font-family:inherit}
+.col-warn{color:var(--amber-text)}
+select.col-select.warn{border-color:#f5a524}
+
+/* muestra de la parrilla: filtros, paginador y canal secundario */
+.filtros-muestra{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-right:8px}
+.filtros-muestra select.input,.paginador select.input{padding:5px 8px;border-radius:8px;font-size:12px;width:auto}
+.filtros-muestra select.input.on{border-color:#ee2a26;color:var(--red-dark);background:#fff0ef}
+.paginador{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
+.paginador .btn:disabled{opacity:.4;cursor:default}
+select.sec-canal{padding:3px 6px;border-radius:7px;font-size:11.5px;min-width:110px}
 </style>
+
 </head>
 <body>
 
 <div class="head">
 <header class="topbar">
   <div class="brand">
-    <div class="logo">N</div>
+    <div class="logo">C</div>
     <div>
       <h1>CLARO NEXUS</h1>
       <p>Orquestador Next Best Action · Consola de configuración</p>
@@ -430,9 +591,31 @@ kbd{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border:1px solid va
           <h3>Muestra de la parrilla</h3>
           <span class="hint" id="muestraHint"></span>
           <div class="spacer"></div>
+          <div class="filtros-muestra" id="filtrosMuestra">
+            <span class="hint">Filtrar</span>
+            <select class="input" id="fEstado"><option value="">Estado: todos</option></select>
+            <select class="input" id="fCanal"><option value="">Canal: todos</option></select>
+            <select class="input" id="fCampana"><option value="">Campaña: todas</option></select>
+            <button class="btn small ghost" id="fLimpiar">Limpiar</button>
+          </div>
           <button class="btn small ghost" id="btnDescargar">⬇ Descargar CSV completo</button>
         </div>
         <div class="table-wrap" id="tablaParrilla"></div>
+        <div class="paginador" id="paginador">
+          <span class="hint" id="pagInfo"></span>
+          <div class="spacer"></div>
+          <select class="input" id="pagTamano">
+            <option value="50">50 por página</option>
+            <option value="100" selected>100 por página</option>
+            <option value="200">200 por página</option>
+            <option value="500">500 por página</option>
+          </select>
+          <button class="btn small ghost" data-pag="primera">« Primera</button>
+          <button class="btn small ghost" data-pag="anterior">‹ Anterior</button>
+          <span class="mono" id="pagActual">—</span>
+          <button class="btn small ghost" data-pag="siguiente">Siguiente ›</button>
+          <button class="btn small ghost" data-pag="ultima">Última »</button>
+        </div>
       </div>
     </div>
   </section>
@@ -455,7 +638,7 @@ kbd{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border:1px solid va
     <div class="section-head">
       <div>
         <h2>Reglas de negocio</h2>
-        <p>El intérprete evalúa cualquier columna del dataset. <b>Elegibilidad</b> excluye productos por cliente y <b>canal</b> restringe autorizaciones o contactos por canal.</p>
+        <p>El intérprete evalúa cualquier columna del dataset. <b>Elegibilidad</b> excluye productos por cliente y <b>canal</b> restringe autorizaciones o contactos por canal. La acción <b>Prioritaria</b> hace que la campaña o el canal del alcance se ofrezca primero y tome cupo antes que los demás para los clientes que cumplen la condición.</p>
       </div>
       <div class="spacer"></div>
       <button class="btn primary" id="btnAddRegla">+ Nueva regla</button>
@@ -651,7 +834,7 @@ const CAMPOS_CAMPANA = [
   { key: "objetivo", label: "Objetivo", type: "text" },
   { key: "columna_score", label: "Columna de score", type: "text", full: true },
   { key: "valor_negocio", label: "Valor de negocio", type: "number", step: "0.01", min: "0" },
-  { key: "canales_permitidos", label: "Canales permitidos", type: "text", hint: "separados por |" },
+  { key: "canales_permitidos", label: "Canales permitidos", type: "canales", full: true },
   { key: "vigencia_inicio", label: "Vigencia inicio", type: "date" },
   { key: "vigencia_fin", label: "Vigencia fin", type: "date" },
 ];
@@ -661,10 +844,10 @@ const CAMPOS_REGLA = [
   { key: "tipo", label: "Tipo", type: "select", options: [["elegibilidad", "Elegibilidad"], ["canal", "Canal"]] },
   { key: "alcance_nivel", label: "Alcance", type: "select", options: [["global", "Global"], ["campana", "Campaña"], ["canal", "Canal"]] },
   { key: "alcance_valores", label: "Valores de alcance", type: "text", hint: "C01|C02 o canal|canal" },
-  { key: "atributo", label: "Atributo del dataset", type: "text" },
+  { key: "atributo", label: "Atributo del dataset", type: "columna", full: true },
   { key: "operador", label: "Operador", type: "select", options: OPERADORES.map((o) => [o, o]) },
   { key: "valor", label: "Valor", type: "text" },
-  { key: "accion", label: "Acción", type: "select", options: [["excluir", "Excluir"]] },
+  { key: "accion", label: "Acción", type: "select", options: [["excluir", "Excluir"], ["priorizar", "Prioritaria (pasa primero)"]] },
 ];
 
 const PARAM_HELP = {
@@ -680,7 +863,7 @@ const PARAM_HELP = {
   "canal.criterios_disponibles": "Criterios válidos separados por |.",
   "canal.orden_preferencia": "Orden de canales para el criterio de preferencia.",
   "canal.umbral_score_canal": "Score mínimo del canal para habilitarlo.",
-  "politica_contacto.canales_por_cliente": "Canales por cliente (el motor actual usa 1).",
+  "politica_contacto.canales_por_cliente": "Canales por cliente. El motor asigna 1 principal (con cupo) y sugiere 1 secundario (no consume cupo).",
   "politica_contacto.max_contactos_semana": "Clientes con este número de contactos quedan fuera.",
 };
 
@@ -692,9 +875,211 @@ function helpParam(nombre) {
 }
 
 /* ============================ render: editores ============================ */
+function selectorColumnaHTML(campo, raw, id) {
+  const cols = state.columnas || [];
+  const existe = cols.some((c) => c.nombre === raw);
+  const tipos = { numero: "número", binario: "0/1", texto: "texto", booleano: "sí/no" };
+  let opciones = `<option value="">${cols.length ? "— escoja una columna —" : "cargando columnas…"}</option>`;
+  if (raw && !existe) {
+    opciones += `<option value="${esc(raw)}" selected>${esc(raw)} (no existe en el dataset)</option>`;
+  }
+  opciones += cols.map((c) =>
+    `<option value="${esc(c.nombre)}" ${c.nombre === raw ? "selected" : ""}>${esc(c.nombre)} · ${esc(tipos[c.tipo] || c.tipo)}</option>`).join("");
+  const info = infoColumna(raw);
+  return `<div class="full"><label for="${id}">${esc(campo.label)}</label>
+    <select class="input col-select ${raw && cols.length && !existe ? "warn" : ""}" id="${id}" data-field="${campo.key}">${opciones}</select>
+    <div class="col-info">${info}</div></div>`;
+}
+
+function infoColumna(nombre) {
+  if (!nombre) return "";
+  const c = (state.columnas || []).find((x) => x.nombre === nombre);
+  if (!c) return (state.columnas || []).length ? `<span class="col-warn">La columna no existe en el dataset seleccionado.</span>` : "";
+  const partes = [];
+  if (c.min != null && c.max != null && c.tipo === "numero") partes.push(`rango ${c.min} a ${c.max}`);
+  partes.push(`${fmtInt(c.distintos)} valores distintos`);
+  if (c.ejemplos && c.ejemplos.length) partes.push(`ej.: ${c.ejemplos.map((v) => String(v)).join(", ")}`);
+  return esc(partes.join(" · "));
+}
+
+async function cargarColumnas() {
+  if (!state.dataset) return;
+  const pedido = state.dataset;
+  try {
+    const r = await api(`/api/columnas?dataset=${encodeURIComponent(pedido)}`);
+    if (pedido !== state.dataset) return;
+    state.columnas = r.columnas || [];
+  } catch (e) {
+    state.columnas = [];
+    toast("warn", "No se pudieron leer las columnas del dataset", e.message);
+  }
+  if (state.config) {
+    if ($$("#reglasGrid .regla-card").length) state.config.reglas = collectReglas();
+    if ($$("#campanasGrid .camp-card").length) state.config.campanas = collectCampanas();
+    renderReglas();
+    renderCampanas();
+  }
+}
+
+/* ============================ canales ============================ */
+const PREF_CUPO = "canal.capacidad_por_corrida.";
+const PREF_TOPE = "politica_contacto.max_productos_por_canal.";
+const PARAM_ORDEN = "canal.orden_preferencia";
+const CANAL_DEFAULTS = { cupo: "1000", tope: "1" };
+
+const separar = (txt) => String(txt || "").split("|").map((x) => x.trim()).filter(Boolean);
+
+function canalesDataset() {
+  return (state.columnas || [])
+    .filter((c) => c.nombre.startsWith("score_canal_"))
+    .map((c) => c.nombre.slice("score_canal_".length));
+}
+
+function canalesParametros() {
+  const set = new Set();
+  ((state.config && state.config.parametros) || []).forEach((p) => {
+    const n = String(p.parametro || "");
+    if (n.startsWith(PREF_CUPO)) set.add(n.slice(PREF_CUPO.length));
+    if (n.startsWith(PREF_TOPE)) set.add(n.slice(PREF_TOPE.length));
+  });
+  return Array.from(set);
+}
+
+function canalesCampanas(lista) {
+  const set = new Set();
+  (lista || []).forEach((c) => separar(c.canales_permitidos).forEach((x) => set.add(x)));
+  return Array.from(set);
+}
+
+function universoCanales(extra = []) {
+  const set = new Set([...canalesDataset(), ...canalesParametros(),
+    ...canalesCampanas((state.config && state.config.campanas) || []), ...extra]);
+  const orden = separar(((state.config && state.config.parametros) || [])
+    .find((p) => p.parametro === PARAM_ORDEN)?.valor);
+  return Array.from(set).sort((a, b) => {
+    const ia = orden.indexOf(a), ib = orden.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+}
+
+function selectorCanalesHTML(campo, raw, id) {
+  const elegidos = separar(raw);
+  const enDataset = new Set(canalesDataset());
+  const hayColumnas = (state.columnas || []).length > 0;
+  const chips = universoCanales(elegidos).map((c) => {
+    const sinScore = hayColumnas && !enDataset.has(c);
+    const titulo = sinScore ? `El dataset no tiene score_canal_${c}: este canal no recibirá clientes` : `score_canal_${c}`;
+    return `<label class="canal-chip ${elegidos.includes(c) ? "on" : ""} ${sinScore ? "warn" : ""}" title="${esc(titulo)}">
+      <input type="checkbox" class="canal-check" value="${esc(c)}" ${elegidos.includes(c) ? "checked" : ""}>${esc(c)}${sinScore ? " ⚠" : ""}</label>`;
+  }).join("");
+  const faltan = hayColumnas ? elegidos.filter((c) => !enDataset.has(c)) : [];
+  return `<div class="full"><label>${esc(campo.label)}</label>
+    <div class="canales-box" id="${id}">
+      ${chips}
+      <button type="button" class="btn small ghost canal-nuevo" title="Agregar un canal nuevo">+ canal</button>
+      <input type="hidden" data-field="${campo.key}" value="${esc(elegidos.join("|"))}">
+    </div>
+    ${faltan.length ? `<div class="col-info"><span class="col-warn">Sin columna de score en el dataset: ${esc(faltan.join(", "))}</span></div>` : ""}
+  </div>`;
+}
+
+state.canalesConservados = new Set();
+
+/* Todo canal con cupo debe tener tope de productos y viceversa. */
+function completarParesCanal() {
+  const params = state.config.parametros;
+  const nombres = new Set(params.map((p) => p.parametro));
+  const creados = [];
+  canalesParametros().forEach((c) => {
+    if (!nombres.has(PREF_CUPO + c)) { params.push({ parametro: PREF_CUPO + c, valor: CANAL_DEFAULTS.cupo }); creados.push(PREF_CUPO + c); }
+    if (!nombres.has(PREF_TOPE + c)) { params.push({ parametro: PREF_TOPE + c, valor: CANAL_DEFAULTS.tope }); creados.push(PREF_TOPE + c); }
+  });
+  return creados;
+}
+
+function sincronizarCanales() {
+  if (!state.config) return;
+  syncConfigFromDom();
+  const usados = canalesCampanas(state.config.campanas);
+  let params = state.config.parametros;
+  const nombres = new Set(params.map((p) => p.parametro));
+  const ordenParam = params.find((p) => p.parametro === PARAM_ORDEN);
+  const agregados = [];
+
+  usados.forEach((c) => {
+    let nuevo = false;
+    if (!nombres.has(PREF_CUPO + c)) { params.push({ parametro: PREF_CUPO + c, valor: CANAL_DEFAULTS.cupo }); nuevo = true; }
+    if (!nombres.has(PREF_TOPE + c)) { params.push({ parametro: PREF_TOPE + c, valor: CANAL_DEFAULTS.tope }); nuevo = true; }
+    if (ordenParam && !separar(ordenParam.valor).includes(c)) {
+      ordenParam.valor = [...separar(ordenParam.valor), c].join("|");
+      nuevo = true;
+    }
+    if (nuevo) agregados.push(c);
+    state.canalesConservados.delete(c);
+  });
+
+  const sobrantes = canalesParametros().filter((c) => !usados.includes(c) && !state.canalesConservados.has(c));
+  let quitados = [];
+  if (sobrantes.length) {
+    const ok = confirm(
+      `Los canales ${sobrantes.join(", ")} ya no están en ninguna campaña.\n\n` +
+      "¿Quitar sus parámetros (cupo, tope de productos y orden de preferencia)?");
+    if (ok) {
+      const fuera = new Set(sobrantes.flatMap((c) => [PREF_CUPO + c, PREF_TOPE + c]));
+      params = params.filter((p) => !fuera.has(p.parametro));
+      if (ordenParam) ordenParam.valor = separar(ordenParam.valor).filter((c) => !sobrantes.includes(c)).join("|");
+      quitados = sobrantes;
+    } else {
+      sobrantes.forEach((c) => state.canalesConservados.add(c));
+    }
+  }
+  state.config.parametros = params;
+  const pares = completarParesCanal();
+
+  if (agregados.length || quitados.length || pares.length) {
+    renderParams();
+    setDirty(true);
+    const partes = [];
+    if (agregados.length) partes.push(`Agregados: ${agregados.join(", ")} (cupo ${CANAL_DEFAULTS.cupo}, tope ${CANAL_DEFAULTS.tope}; ajústelos en Parámetros).`);
+    if (quitados.length) partes.push(`Quitados: ${quitados.join(", ")}.`);
+    if (pares.length) partes.push(`Completados: ${pares.join(", ")}.`);
+    const sinScore = (state.columnas || []).length
+      ? agregados.filter((c) => !canalesDataset().includes(c)) : [];
+    if (sinScore.length) partes.push(`Ojo: el dataset no tiene score_canal_${sinScore.join(", score_canal_")}.`);
+    toast(sinScore.length ? "warn" : "success", "Parámetros de canales actualizados", partes.join("\n"), 7000);
+  }
+}
+
+document.addEventListener("change", (e) => {
+  if (!e.target.classList || !e.target.classList.contains("canal-check")) return;
+  const caja = e.target.closest(".canales-box");
+  const valores = $$(".canal-check", caja).filter((x) => x.checked).map((x) => x.value);
+  caja.querySelector('input[type="hidden"]').value = valores.join("|");
+  e.target.closest(".canal-chip").classList.toggle("on", e.target.checked);
+  setDirty(true);
+  sincronizarCanales();
+});
+
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest && e.target.closest(".canal-nuevo");
+  if (!btn) return;
+  const nombre = (prompt("Nombre del canal nuevo (minúsculas, sin espacios). Debe coincidir con la columna score_canal_<canal> del dataset:") || "")
+    .trim().toLowerCase();
+  if (!nombre) return;
+  if (!/^[a-z0-9_]+$/.test(nombre)) return toast("error", "Nombre de canal inválido", "Use solo letras minúsculas, números y _.");
+  const oculto = btn.closest(".canales-box").querySelector('input[type="hidden"]');
+  oculto.value = [...new Set([...separar(oculto.value), nombre])].join("|");
+  setDirty(true);
+  sincronizarCanales();
+  renderCampanas();
+});
+
 function campoHTML(campo, valor, base) {
   const raw = valor == null ? "" : String(valor);
   const id = `${base}_${campo.key}`;
+  if (campo.type === "columna") return selectorColumnaHTML(campo, raw, id);
+  if (campo.type === "canales") return selectorCanalesHTML(campo, raw, id);
   const hint = campo.hint ? ` <span style="text-transform:none;font-weight:400;color:var(--muted-2)">· ${esc(campo.hint)}</span>` : "";
   if (campo.type === "select") {
     const opciones = campo.options.map(([v, l]) =>
@@ -745,6 +1130,7 @@ function reglaCard(r, indice) {
     </div>
     <div class="entity-foot">
       <span class="mono">${esc(r.tipo || "—")}</span>
+      ${r.accion === "priorizar" ? `<span class="tag amber">prioritaria</span>` : ""}
       <span class="spacer"></span>
       <span>${esc(nivel)}</span>
     </div>
@@ -1020,7 +1406,8 @@ function renderResultados(run) {
 
   $("#tablaCanales").innerHTML = renderTabla([
     { key: "canal", label: "Canal", render: (f) => `<span class="tag blue">${esc(f.canal)}</span>` },
-    { key: "clientes", label: "Clientes", num: true, render: (f) => fmtInt(f.clientes) },
+    { key: "clientes", label: "Principal", num: true, render: (f) => fmtInt(f.clientes) },
+    { key: "secundario", label: "Secundario (sin cupo)", num: true, render: (f) => fmtInt(f.secundario || 0) },
     { key: "cupo", label: "Cupo", num: true, render: (f) => f.cupo == null ? "—" : fmtInt(f.cupo) },
     {
       key: "uso_pct", label: "Uso del cupo", render: (f) => {
@@ -1080,22 +1467,140 @@ function renderResultados(run) {
     cajaRazones.innerHTML = "";
   }
 
-  $("#muestraHint").textContent = `mostrando ${fmtInt((run.muestra || []).length)} de ${fmtInt(run.total_filas)} filas`;
+  muestra.pagina = 1;
+  cargarMuestra();
+
+  renderAvisos(run.avisos || []);
+  $("#btnDescargar").disabled = false;
+}
+
+/* ===================== muestra de la parrilla ===================== */
+const muestra = { pagina: 1, tamano: 100, filas: [], seq: 0 };
+
+function llenarFiltro(id, valores, etiqueta, actual) {
+  const sel = $(id);
+  const nombres = { asignado: "asignado", sin_accion: "sin acción" };
+  sel.innerHTML = `<option value="">${esc(etiqueta)}</option>` + valores.map((v) =>
+    `<option value="${esc(v)}"${v === actual ? " selected" : ""}>${esc(nombres[v] || v)}</option>`).join("");
+  sel.classList.toggle("on", !!actual);
+}
+
+async function cargarMuestra() {
+  const seq = ++muestra.seq;
+  const q = new URLSearchParams({
+    estado: $("#fEstado").value, canal: $("#fCanal").value, campana: $("#fCampana").value,
+    pagina: muestra.pagina, tamano: muestra.tamano,
+  });
+  $("#muestraHint").textContent = "cargando…";
+  try {
+    const r = await api(`/api/parrilla?${q}`);
+    if (seq !== muestra.seq) return;
+    muestra.pagina = r.pagina;
+    muestra.filas = r.filas || [];
+    llenarFiltro("#fEstado", r.opciones.estado, "Estado: todos", $("#fEstado").value);
+    llenarFiltro("#fCanal", r.opciones.canal, "Canal: todos", $("#fCanal").value);
+    llenarFiltro("#fCampana", r.opciones.campana, "Campaña: todas", $("#fCampana").value);
+    const filtrado = r.total !== r.total_parrilla;
+    $("#muestraHint").textContent = filtrado
+      ? `${fmtInt(r.total)} de ${fmtInt(r.total_parrilla)} clientes coinciden`
+      : `${fmtInt(r.total_parrilla)} clientes`;
+    const desde = r.total ? (r.pagina - 1) * r.tamano + 1 : 0;
+    const hasta = Math.min(r.pagina * r.tamano, r.total);
+    $("#pagInfo").textContent = `filas ${fmtInt(desde)}–${fmtInt(hasta)} de ${fmtInt(r.total)}`;
+    $("#pagActual").textContent = `página ${fmtInt(r.pagina)} de ${fmtInt(r.paginas)}`;
+    muestra.paginas = r.paginas;
+    document.querySelectorAll("#paginador [data-pag]").forEach((btn) => {
+      const atras = btn.dataset.pag === "primera" || btn.dataset.pag === "anterior";
+      btn.disabled = atras ? r.pagina <= 1 : r.pagina >= r.paginas;
+    });
+    renderMuestra();
+  } catch (e) {
+    if (seq !== muestra.seq) return;
+    $("#muestraHint").textContent = "";
+    $("#tablaParrilla").innerHTML = `<div class="empty">${esc(e.message)}</div>`;
+  }
+}
+
+function renderMuestra() {
   $("#tablaParrilla").innerHTML = renderTabla([
     { key: "id_cliente", label: "ID cliente", render: (f) => `<span class="mono">${esc(f.id_cliente)}</span>` },
     {
       key: "estado", label: "Estado", render: (f) => f.estado === "asignado"
         ? `<span class="tag green">asignado</span>` : `<span class="tag gray">sin acción</span>`
     },
-    { key: "canal", label: "Canal", render: (f) => f.canal ? `<span class="tag blue">${esc(f.canal)}</span>` : "—" },
+    { key: "canal", label: "Canal principal", render: (f) => f.canal ? `<span class="tag blue">${esc(f.canal)}</span>` : "—" },
+    { key: "canal_secundario", label: "Canal secundario", render: selectorSecundario },
     { key: "campana_1", label: "Campaña 1", render: (f) => f.campana_1 ? `<span class="mono">${esc(f.campana_1)}</span>` : "—" },
     { key: "campana_2", label: "Campaña 2", render: (f) => f.campana_2 ? `<span class="mono">${esc(f.campana_2)}</span>` : "—" },
     { key: "razon", label: "Razón", trunc: true },
-  ], run.muestra, "La parrilla está vacía.");
-
-  renderAvisos(run.avisos || []);
-  $("#btnDescargar").disabled = false;
+  ], muestra.filas, "Ningún cliente coincide con el filtro.");
 }
+
+["#fEstado", "#fCanal", "#fCampana"].forEach((id) => {
+  document.addEventListener("change", (ev) => {
+    if (ev.target.id !== id.slice(1)) return;
+    muestra.pagina = 1;
+    cargarMuestra();
+  });
+});
+document.addEventListener("change", (ev) => {
+  if (ev.target.id !== "pagTamano") return;
+  muestra.tamano = Number(ev.target.value) || 100;
+  muestra.pagina = 1;
+  cargarMuestra();
+});
+document.addEventListener("click", (ev) => {
+  const t = ev.target;
+  if (t.id === "fLimpiar") {
+    ["#fEstado", "#fCanal", "#fCampana"].forEach((id) => { $(id).value = ""; });
+    muestra.pagina = 1;
+    return cargarMuestra();
+  }
+  const btn = t.closest && t.closest("#paginador [data-pag]");
+  if (!btn || btn.disabled) return;
+  const accion = btn.dataset.pag;
+  if (accion === "primera") muestra.pagina = 1;
+  else if (accion === "anterior") muestra.pagina -= 1;
+  else if (accion === "siguiente") muestra.pagina += 1;
+  else if (accion === "ultima") muestra.pagina = muestra.paginas || 1;
+  cargarMuestra();
+});
+
+/* ======================== canal secundario ======================== */
+function selectorSecundario(f) {
+  const alternos = String(f.canales_alternos || "").split("|").map((c) => c.trim()).filter(Boolean);
+  if (f.estado !== "asignado" || !alternos.length) return "—";
+  const actual = f.canal_secundario || "";
+  const opciones = [`<option value="">— ninguno</option>`]
+    .concat(alternos.map((c) => `<option value="${esc(c)}"${c === actual ? " selected" : ""}>${esc(c)}</option>`))
+    .join("");
+  return `<select class="input sec-canal" data-cliente="${esc(f.id_cliente)}" data-actual="${esc(actual)}"
+    title="Canales alternos válidos: ${esc(alternos.join(", "))}">${opciones}</select>`;
+}
+
+document.addEventListener("change", async (ev) => {
+  const sel = ev.target;
+  if (!sel.classList || !sel.classList.contains("sec-canal")) return;
+  const cliente = sel.dataset.cliente;
+  const canal = sel.value;
+  sel.disabled = true;
+  try {
+    const r = await api("/api/canal_secundario", {
+      method: "POST",
+      body: JSON.stringify({ id_cliente: cliente, canal }),
+    });
+    sel.dataset.actual = r.canal_secundario || "";
+    const fila = (muestra.filas || []).find((x) => String(x.id_cliente) === String(cliente));
+    if (fila) fila.canal_secundario = r.canal_secundario || null;
+    toast("success", "Canal secundario actualizado",
+      `Cliente ${cliente}: ${r.canal_secundario || "sin canal secundario"}. El CSV descargado ya incluye el cambio.`);
+  } catch (e) {
+    sel.value = sel.dataset.actual || "";
+    toast("error", "No se pudo cambiar el canal secundario", e.message);
+  } finally {
+    sel.disabled = false;
+  }
+});
 
 /* ============================ historial ============================ */
 function renderHistorial(lista) {
@@ -1310,6 +1815,7 @@ function eliminarCampana(boton) {
   state.config.campanas = collectCampanas();
   $("#countCampanas").textContent = state.config.campanas.length;
   setDirty(true);
+  sincronizarCanales();
 }
 
 function eliminarRegla(boton) {
@@ -1367,10 +1873,12 @@ $("#btnParamConfirm").addEventListener("click", () => {
     return toast("error", "Parámetro duplicado", nombre);
   }
   state.config.parametros.push({ parametro: nombre, valor });
+  const pares = completarParesCanal();
   $("#modalParam").classList.add("hidden");
   renderParams();
   setDirty(true);
-  toast("success", "Parámetro agregado", nombre);
+  toast("success", "Parámetro agregado",
+    pares.length ? `${nombre}\nTambién se creó: ${pares.join(", ")}` : nombre);
 });
 
 $("#paramFiltro").addEventListener("input", filtrarParams);
@@ -1381,6 +1889,14 @@ $("#datasets").addEventListener("click", (e) => {
   state.dataset = boton.dataset.dataset;
   renderDatasets();
   renderMeta();
+  cargarColumnas();
+});
+
+document.addEventListener("change", (e) => {
+  if (!e.target.classList || !e.target.classList.contains("col-select")) return;
+  const info = e.target.parentElement.querySelector(".col-info");
+  if (info) info.innerHTML = infoColumna(e.target.value);
+  e.target.classList.remove("warn");
 });
 
 document.addEventListener("input", (e) => {
@@ -1444,6 +1960,7 @@ async function init() {
     aplicarConfig(config);
     if (health.config_dir) state.configDir = health.config_dir;
     renderMeta();
+    cargarColumnas();
     await cargarHistorial();
     if (!health.ortools) {
       toast("warn", "OR-Tools no instalado",
