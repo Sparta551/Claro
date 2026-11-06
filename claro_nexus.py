@@ -1950,6 +1950,257 @@ def cambiar_canal_secundario(id_cliente: Any, canal: Optional[str]) -> Dict[str,
 
 
 # ---------------------------------------------------------------------------
+# Graficos
+# ---------------------------------------------------------------------------
+VARIABLES_GRAFICOS_EXCLUIR = {"id_cliente"}
+MAX_CATEGORIAS_GRAFICO = 12
+MAX_BINS_GRAFICO = 8
+TOP_SERIES_GRAFICO = 6
+PLACEHOLDER_SIN_DATO = "Sin dato"
+VARIABLES_GRAFICO_PREFERIDAS = [
+    "region", "estrato", "tipo_linea", "gama_equipo", "riesgo_churn",
+    "calificacion_riesgo", "plan_datos_gb", "edad",
+]
+ORDENES_CATEGORICOS = {
+    "calificacion_riesgo": ["E", "A", "B", "C", "P"],
+}
+
+
+def _variables_graficos(datos: pd.DataFrame) -> List[Dict[str, Any]]:
+    salida: List[Dict[str, Any]] = []
+    for col in datos.columns:
+        nombre = str(col)
+        if nombre in VARIABLES_GRAFICOS_EXCLUIR or nombre.startswith("score_"):
+            continue
+        serie = datos[col]
+        try:
+            distintos = int(serie.nunique(dropna=True))
+        except Exception:
+            continue
+        if distintos <= 1:
+            continue
+        es_numerica = pd.api.types.is_numeric_dtype(serie) and not pd.api.types.is_bool_dtype(serie)
+        tipo = "numerica" if es_numerica and distintos > MAX_CATEGORIAS_GRAFICO else "categorica"
+        salida.append({"nombre": nombre, "tipo": tipo, "distintos": distintos})
+    salida.sort(key=lambda v: (v["tipo"] != "categorica", v["distintos"], v["nombre"]))
+    return salida
+
+
+def _etiqueta_intervalo(intervalo: Any) -> str:
+    if pd.isna(intervalo):
+        return PLACEHOLDER_SIN_DATO
+    try:
+        return f"{float(intervalo.left):g} - {float(intervalo.right):g}"
+    except Exception:
+        return str(intervalo)
+
+
+def _orden_categorias(conteo: pd.Series, preferido: Optional[List[str]]) -> List[str]:
+    base = [str(x) for x in conteo.index]
+    if not preferido:
+        return base
+    por_clave = {valor.upper(): valor for valor in base}
+    orden = [por_clave[p.upper()] for p in preferido if p.upper() in por_clave]
+    orden.extend(valor for valor in base if valor not in orden)
+    return orden
+
+
+def _etiquetas_categoria(
+    serie: pd.Series,
+    tipo: str,
+    max_categorias: int = MAX_CATEGORIAS_GRAFICO,
+    nombre_variable: str = "",
+) -> Tuple[pd.Series, List[str]]:
+    if tipo == "numerica":
+        numeros = pd.to_numeric(serie, errors="coerce")
+        cortes = max(2, min(MAX_BINS_GRAFICO, int(numeros.nunique(dropna=True))))
+        try:
+            tramos = pd.qcut(numeros, q=cortes, duplicates="drop")
+        except Exception:
+            tramos = pd.cut(numeros, bins=min(cortes, 6))
+        etiquetas = tramos.apply(_etiqueta_intervalo).astype(str)
+        orden = [_etiqueta_intervalo(c) for c in getattr(tramos, "cat", tramos).categories]
+        if bool(tramos.isna().any()):
+            orden.append(PLACEHOLDER_SIN_DATO)
+        return etiquetas, orden
+
+    texto = serie.where(serie.notna(), PLACEHOLDER_SIN_DATO).astype(str).str.strip()
+    texto = texto.mask(texto == "", PLACEHOLDER_SIN_DATO)
+    conteo = texto.value_counts()
+    preferido = ORDENES_CATEGORICOS.get(nombre_variable)
+    if len(conteo) <= max_categorias:
+        return texto, _orden_categorias(conteo, preferido)
+    principales = [str(x) for x in conteo.index[: max_categorias - 1]]
+    etiquetas = texto.where(texto.isin(principales), "Otros")
+    if preferido:
+        orden = [p for p in preferido if p in principales]
+        orden += [p for p in principales if p not in orden]
+        return etiquetas, orden + ["Otros"]
+    return etiquetas, principales + ["Otros"]
+
+
+def _series_apiladas(
+    df: pd.DataFrame,
+    categorias: List[str],
+    columna_serie: str,
+    top: int = TOP_SERIES_GRAFICO,
+) -> List[Dict[str, Any]]:
+    if df.empty or not categorias:
+        return []
+    conteo = df[columna_serie].astype(str).value_counts()
+    principales = [str(x) for x in conteo.index[:top]]
+    trabajo = df.copy()
+    trabajo[columna_serie] = trabajo[columna_serie].astype(str)
+    if len(conteo) > top:
+        trabajo[columna_serie] = trabajo[columna_serie].where(
+            trabajo[columna_serie].isin(principales), "Otros"
+        )
+        principales.append("Otros")
+    pivote = trabajo.groupby(["_cat", columna_serie]).size().unstack(fill_value=0)
+    pivote = pivote.reindex(index=categorias, columns=principales, fill_value=0).fillna(0)
+    return [
+        {"name": str(nombre), "valores": [int(v) for v in pivote[nombre].tolist()]}
+        for nombre in principales
+    ]
+
+
+def construccion_graficos(variable: str = "") -> Dict[str, Any]:
+    resultado = STATE.get("resultado")
+    if resultado is None:
+        raise ValueError("Todavia no hay una corrida. Ejecute el motor para ver los graficos.")
+    config_dir = Path(STATE["config_dir"] or localizar_config_dir())
+    dataset = STATE["dataset"]
+    datos = cargar_datos(config_dir, dataset)
+    variables = _variables_graficos(datos)
+    if not variables:
+        raise ValueError("No hay variables del dataset para graficar.")
+
+    disponibles = {v["nombre"] for v in variables}
+    if not variable or variable not in disponibles:
+        variable = next(
+            (v for v in VARIABLES_GRAFICO_PREFERIDAS if v in disponibles),
+            variables[0]["nombre"],
+        )
+    tipo = next(v["tipo"] for v in variables if v["nombre"] == variable)
+    etiquetas, categorias = _etiquetas_categoria(datos[variable], tipo, nombre_variable=variable)
+
+    perfil = pd.DataFrame({
+        "id_cliente": datos["id_cliente"].to_numpy(),
+        "_cat": etiquetas.to_numpy(),
+    })
+    parrilla = resultado["parrilla"][["id_cliente", "estado", "canal", "canal_secundario"]].copy()
+    base = parrilla.merge(perfil, on="id_cliente", how="left")
+    base["_cat"] = base["_cat"].fillna(PLACEHOLDER_SIN_DATO)
+    asignados = base.loc[base["estado"] == "asignado"].copy()
+
+    total = base.groupby("_cat", as_index=False).agg(
+        clientes=("id_cliente", "nunique"),
+        asignados=("estado", lambda s: int((s == "asignado").sum())),
+    ).rename(columns={"_cat": "categoria"})
+
+    ofertas = resultado.get("ofertas")
+    productos_resumen: List[Dict[str, Any]] = []
+    ofv = pd.DataFrame(columns=["id_cliente", "producto", "valor", "_cat"])
+    if ofertas is not None and not ofertas.empty:
+        of = ofertas.copy()
+        of["valor"] = (
+            pd.to_numeric(of["score_producto"], errors="coerce")
+            * pd.to_numeric(of["score_canal"], errors="coerce")
+            * pd.to_numeric(of["valor_negocio"], errors="coerce")
+        )
+        productos_resumen = df_registros(
+            of.groupby("producto", as_index=False)
+            .agg(
+                clientes=("id_cliente", "nunique"),
+                ofertas=("producto", "size"),
+                valor=("valor", "sum"),
+            )
+            .sort_values("ofertas", ascending=False)
+        )
+        ofv = of[["id_cliente", "producto", "valor"]].merge(perfil, on="id_cliente", how="left")
+        ofv["_cat"] = ofv["_cat"].fillna(PLACEHOLDER_SIN_DATO)
+        por_categoria = ofv.groupby("_cat", as_index=False).agg(
+            ofertas=("producto", "size"),
+            valor=("valor", "sum"),
+        ).rename(columns={"_cat": "categoria"})
+        total = total.merge(por_categoria, on="categoria", how="left")
+
+    for columna, defecto in (("ofertas", 0), ("valor", 0.0)):
+        if columna not in total.columns:
+            total[columna] = defecto
+        else:
+            total[columna] = total[columna].fillna(defecto)
+    total = total.set_index("categoria").reindex(categorias).reset_index()
+    total = total.fillna({"clientes": 0, "asignados": 0, "ofertas": 0, "valor": 0.0})
+
+    cupos = resultado.get("cupos") or {}
+    canales_map: Dict[str, Dict[str, Any]] = {}
+    for canal, cupo in cupos.items():
+        canales_map[str(canal)] = {
+            "canal": str(canal),
+            "asignados": 0,
+            "productos": 0,
+            "valor": 0.0,
+            "cupo": int(cupo),
+            "secundario": 0,
+        }
+    asignacion = resultado.get("asignacion")
+    if asignacion is not None and not asignacion.empty:
+        agrupado = asignacion.groupby("canal", as_index=False).agg(
+            asignados=("id_cliente", "nunique"),
+            productos=("cantidad_productos", "sum"),
+            valor=("valor_total", "sum"),
+        )
+        for fila in agrupado.to_dict("records"):
+            canal = str(fila["canal"])
+            item = canales_map.setdefault(
+                canal,
+                {"canal": canal, "asignados": 0, "productos": 0, "valor": 0.0,
+                 "cupo": None, "secundario": 0},
+            )
+            item["asignados"] = int(fila["asignados"])
+            item["productos"] = int(fila["productos"])
+            item["valor"] = float(fila["valor"])
+
+    secundarios = parrilla["canal_secundario"].dropna().astype(str).value_counts()
+    for canal, cantidad in secundarios.items():
+        item = canales_map.setdefault(
+            str(canal),
+            {"canal": str(canal), "asignados": 0, "productos": 0, "valor": 0.0,
+             "cupo": None, "secundario": 0},
+        )
+        item["secundario"] = int(cantidad)
+
+    canales: List[Dict[str, Any]] = []
+    for item in canales_map.values():
+        cupo = item.get("cupo")
+        item["uso_pct"] = (
+            round(100 * item["asignados"] / cupo, 2) if cupo else None
+        )
+        item["valor"] = round(float(item["valor"]), 6)
+        canales.append(item)
+    canales.sort(key=lambda c: (c["asignados"], c["productos"], c["canal"]), reverse=True)
+
+    series_canal = _series_apiladas(asignados, categorias, "canal")
+    series_producto = _series_apiladas(ofv, categorias, "producto")
+
+    return {
+        "ok": True,
+        "dataset": dataset,
+        "variable": variable,
+        "tipo_variable": tipo,
+        "variables": variables,
+        "canales": canales,
+        "productos": productos_resumen,
+        "por_variable": df_registros(total),
+        "canales_por_variable": {"categorias": categorias, "series": series_canal},
+        "productos_por_variable": {"categorias": categorias, "series": series_producto},
+        "total_clientes": int(len(parrilla)),
+        "total_asignados": int(len(asignados)),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Servidor HTTP local
 # ---------------------------------------------------------------------------
 class NexusHTTPHandler(BaseHTTPRequestHandler):
@@ -2031,6 +2282,14 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "historial": STATE["historial"]})
         if ruta == "/api/parrilla.csv":
             return self._servir_parrilla()
+        if ruta == "/api/graficos":
+            q = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+            try:
+                with STATE_LOCK:
+                    graficos = construccion_graficos(q.get("variable", ""))
+                return self._json(graficos)
+            except Exception as exc:
+                return self._error(str(exc), 400)
         if ruta == "/api/parrilla":
             return self._servir_parrilla_paginada()
         if ruta == "/api/columnas":
