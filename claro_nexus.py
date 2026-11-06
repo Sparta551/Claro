@@ -33,7 +33,7 @@ from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 import numpy as np
 import pandas as pd
@@ -70,6 +70,8 @@ DATASETS = {
     "demo": ("casos_ejemplo_clientes.csv", "Demostracion (5 clientes)"),
     "full": ("clientes 1.csv", "Base completa (100.000 clientes)")
 }
+ACCIONES = {"excluir", "priorizar"}
+PRIORIDAD_BONO = 10.0  # bono que sube una oferta priorizada por encima de cualquier otra
 OPERADORES = {"==", "!=", ">", ">=", "<", "<=", "en", "not_en", "contiene", "no_contiene"}
 DATA_CACHE: Dict[str, pd.DataFrame] = {}
 
@@ -341,8 +343,9 @@ def _normalizar_reglas(df: pd.DataFrame) -> pd.DataFrame:
     if not df["operador"].isin(OPERADORES).all():
         malos = sorted(set(df["operador"]) - OPERADORES)
         raise ValueError(f"Operadores no soportados: {malos}")
-    if not (df["accion"] == "excluir").all():
-        raise ValueError("La unica accion soportada es 'excluir'.")
+    if not df["accion"].isin(ACCIONES).all():
+        malas = sorted(set(df["accion"]) - ACCIONES)
+        raise ValueError(f"Acciones no soportadas: {malas}. Use 'excluir' o 'priorizar'.")
     if (df["atributo"] == "").any():
         raise ValueError("El atributo de una regla no puede estar vacio.")
     df["activa"] = [_to_int01(v) for v in df["activa"]]
@@ -527,6 +530,61 @@ def _reglas_por_tipo(reglas: pd.DataFrame, tipo: str) -> pd.DataFrame:
     return reglas.loc[(reglas["tipo"] == tipo) & (reglas["activa"].astype(int) == 1)]
 
 
+def _reglas_prioritarias(reglas: pd.DataFrame) -> pd.DataFrame:
+    return reglas.loc[(reglas["accion"] == "priorizar") & (reglas["activa"].astype(int) == 1)]
+
+
+def aplicar_prioridades(
+    opciones: pd.DataFrame, datos: pd.DataFrame, reglas: pd.DataFrame
+) -> pd.DataFrame:
+    """Marca las ofertas (cliente, campana, canal) que cumplen reglas 'priorizar'.
+
+    El alcance define que se prioriza: global = todas las ofertas del cliente,
+    campana = solo esas campanas, canal = solo esos canales. La condicion se
+    evalua con las columnas del cliente. Las exclusiones ya se aplicaron antes,
+    asi que una regla prioritaria nunca rescata una oferta excluida.
+    """
+    opciones = opciones.copy()
+    opciones["prioridad"] = 0
+    opciones["reglas_prioridad"] = ""
+    prioritarias = _reglas_prioritarias(reglas)
+    if prioritarias.empty or opciones.empty:
+        return opciones
+    faltan = sorted({str(a) for a in prioritarias["atributo"]} - set(opciones.columns))
+    inexistentes = [a for a in faltan if a not in datos.columns]
+    if inexistentes:
+        raise ValueError(f"Columna de regla prioritaria inexistente: {inexistentes}")
+    trabajo = opciones
+    if faltan:
+        trabajo = opciones.merge(
+            datos[["id_cliente"] + faltan].drop_duplicates("id_cliente"),
+            on="id_cliente", how="left", validate="many_to_one",
+        )
+        trabajo.index = opciones.index
+    for _, regla in prioritarias.iterrows():
+        nivel = str(regla["alcance_nivel"])
+        valores = [x.strip() for x in str(regla["alcance_valores"]).split("|") if x.strip()]
+        if nivel == "campana":
+            alcance = trabajo["campana"].isin(valores)
+        elif nivel == "canal":
+            alcance = trabajo["canal"].isin(valores)
+        else:
+            alcance = pd.Series(True, index=trabajo.index)
+        if not alcance.any():
+            continue
+        valor: Any = str(regla["valor"])
+        if valor == "$producto":
+            valor = trabajo.loc[alcance, "producto"]
+        cumple = evaluar_condicion(
+            trabajo.loc[alcance, str(regla["atributo"])], regla["operador"], valor
+        ).fillna(False).astype(bool)
+        idx = cumple.index[cumple.to_numpy()]
+        opciones.loc[idx, "prioridad"] += 1
+        opciones.loc[idx, "reglas_prioridad"] += str(regla["id"]) + "|"
+    opciones["reglas_prioridad"] = opciones["reglas_prioridad"].str.rstrip("|")
+    return opciones
+
+
 def evaluar_elegibilidad(
     datos: pd.DataFrame, campanas: pd.DataFrame, reglas: pd.DataFrame
 ) -> pd.DataFrame:
@@ -669,7 +727,7 @@ def construir_paquetes(
 
     columnas_paquete = [
         "id_cliente", "canal", "productos", "campanas", "cantidad_productos", "valor_total",
-        "score_prioridad", "score_canal", "jerarquia_rank",
+        "score_prioridad", "score_canal", "jerarquia_rank", "prioridad", "reglas_prioridad",
     ]
     if elegibles.empty:
         return pd.DataFrame(columns=columnas_paquete), elegibilidad, diagnostico
@@ -706,7 +764,7 @@ def construir_paquetes(
         )
     for _, regla in reglas_canal.iterrows():
         if str(regla["accion"]) != "excluir":
-            raise ValueError(f"Accion de canal no soportada: {regla['accion']}")
+            continue  # las reglas 'priorizar' se aplican despues
         canales_regla = [x.strip() for x in str(regla["alcance_valores"]).split("|")]
         mask = opciones["canal"].isin(canales_regla)
         if not mask.any():
@@ -752,6 +810,11 @@ def construir_paquetes(
             + w_jer * opciones["nivel_jerarquia"]
         )
 
+    opciones = aplicar_prioridades(opciones, datos, reglas)
+    opciones["score_prioridad"] = (
+        opciones["score_prioridad"] + PRIORIDAD_BONO * opciones["prioridad"]
+    )
+
     limite_pref = "politica_contacto.max_productos_por_canal."
     limites = {
         str(f["parametro"]).replace(limite_pref, ""): int(float(f["valor"]))
@@ -782,6 +845,11 @@ def construir_paquetes(
         score_prioridad=("score_prioridad", "max"),
         score_canal=("score_canal", "max"),
         jerarquia_rank=("jerarquia_rank", "min"),
+        prioridad=("prioridad", "max"),
+        reglas_prioridad=(
+            "reglas_prioridad",
+            lambda x: "|".join(sorted({r for v in x for r in str(v).split("|") if r})),
+        ),
     )
     return paquetes, elegibilidad, diagnostico
 
@@ -822,7 +890,8 @@ def asignar_optimo(paquetes: pd.DataFrame, cupos: Dict[str, int]) -> pd.DataFram
     escala = 1_000_000
     arcos = {}
     for fila in paquetes.itertuples(index=True):
-        costo = -int(round(float(fila.valor_total) * escala))
+        bono = PRIORIDAD_BONO * float(getattr(fila, "prioridad", 0) or 0)
+        costo = -int(round((float(fila.valor_total) + bono) * escala))
         arco = modelo.add_arc_with_capacity_and_unit_cost(
             nodo_cliente[fila.id_cliente], nodo_canal[fila.canal], 1, costo
         )
@@ -847,11 +916,14 @@ def asignar_heuristico(
     if paquetes.empty:
         return paquetes.copy()
     trabajo = paquetes.copy()
+    if "prioridad" not in trabajo.columns:
+        trabajo["prioridad"] = 0
     if criterio == "orden_preferencia" and orden_preferencia:
         rank = {c: i for i, c in enumerate(orden_preferencia)}
         trabajo["_orden"] = trabajo["canal"].map(rank).fillna(len(rank))
         trabajo = trabajo.sort_values(
-            ["_orden", "score_prioridad", "valor_total"], ascending=[True, False, False]
+            ["prioridad", "_orden", "score_prioridad", "valor_total"],
+            ascending=[False, True, False, False],
         )
     else:
         trabajo = trabajo.sort_values(
@@ -881,6 +953,51 @@ def asignar(paquetes: pd.DataFrame, cupos: Dict[str, int], parametros: pd.DataFr
 
 
 # ---------------------------------------------------------------------------
+# Canal secundario
+# ---------------------------------------------------------------------------
+def sugerir_canal_secundario(
+    paquetes: pd.DataFrame,
+    asignacion: pd.DataFrame,
+    cupos: Dict[str, int],
+    parametros: pd.DataFrame,
+) -> pd.DataFrame:
+    """Para cada cliente asignado propone un segundo canal.
+
+    Las alternativas son los otros canales en los que el cliente tiene un paquete
+    valido (reglas de canal, umbral de score y canales permitidos ya aplicados).
+    El canal secundario no consume ni valida cupo: el cupo por canal solo
+    cuenta el canal principal.
+    """
+    columnas = ["id_cliente", "canal_secundario", "canales_alternos"]
+    if paquetes.empty or asignacion.empty:
+        return pd.DataFrame(columns=columnas)
+
+    principal = asignacion[["id_cliente", "canal"]].rename(columns={"canal": "_principal"})
+    alt = paquetes.merge(principal, on="id_cliente", how="inner")
+    alt = alt.loc[alt["canal"] != alt["_principal"]].copy()
+    if alt.empty:
+        return pd.DataFrame(columns=columnas)
+
+    cfg = dicc_parametros(parametros)
+    criterio = str(cfg.get("canal.criterio", "score_canal")).strip()
+    if criterio == "orden_preferencia":
+        orden = lista_param(cfg, "canal.orden_preferencia")
+        rank = {c: i for i, c in enumerate(orden)}
+        alt["_orden"] = alt["canal"].map(rank).fillna(len(rank))
+        alt = alt.sort_values(["prioridad", "_orden", "valor_total"], ascending=[False, True, False])
+    else:
+        alt = alt.sort_values(["prioridad", "valor_total"], ascending=[False, False])
+
+    alternos = alt.groupby("id_cliente", sort=False)["canal"].agg("|".join)
+
+    elegido = alt.drop_duplicates("id_cliente").set_index("id_cliente")["canal"]
+
+    salida = alternos.rename("canales_alternos").reset_index()
+    salida["canal_secundario"] = salida["id_cliente"].map(elegido)
+    return salida[columnas]
+
+
+# ---------------------------------------------------------------------------
 # Parrilla y razones
 # ---------------------------------------------------------------------------
 def construir_parrilla(
@@ -888,6 +1005,7 @@ def construir_parrilla(
     paquetes: pd.DataFrame,
     diagnostico: pd.Series,
     parametros: pd.DataFrame,
+    secundarios: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     cfg = dicc_parametros(parametros)
     id_col = datos[["id_cliente"]].copy()
@@ -896,7 +1014,7 @@ def construir_parrilla(
         asignadas = pd.DataFrame(
             columns=[
                 "id_cliente", "canal", "campanas", "productos",
-                "cantidad_productos", "valor_total",
+                "cantidad_productos", "valor_total", "reglas_prioridad",
             ]
         )
     split = asignadas["campanas"].str.split("|", regex=False)
@@ -909,7 +1027,7 @@ def construir_parrilla(
         asignadas[
             [
                 "id_cliente", "canal", "campana_1", "campana_2", "producto_1",
-                "producto_2", "cantidad_productos", "valor_total",
+                "producto_2", "cantidad_productos", "valor_total", "reglas_prioridad",
             ]
         ],
         on="id_cliente",
@@ -917,6 +1035,16 @@ def construir_parrilla(
         validate="one_to_one",
     )
     parrilla["estado"] = np.where(parrilla["canal"].notna(), "asignado", "sin_accion")
+    if secundarios is None or secundarios.empty:
+        parrilla["canal_secundario"] = np.nan
+        parrilla["canales_alternos"] = np.nan
+    else:
+        parrilla = parrilla.merge(
+            secundarios[["id_cliente", "canal_secundario", "canales_alternos"]],
+            on="id_cliente",
+            how="left",
+            validate="one_to_one",
+        )
 
     criterio = str(cfg.get("canal.criterio", "score_canal")).strip()
     etiqueta_criterio = (
@@ -930,11 +1058,13 @@ def construir_parrilla(
         (
             f"Canal {canal} elegido por {etiqueta_criterio} con cupo; "
             f"{int(n)} producto(s) segun tope del canal (valor esperado {float(v):.4f})"
+            + (f"; priorizado por {str(rp).replace('|', ', ')}" if isinstance(rp, str) and rp else "")
         )
-        for canal, n, v in zip(
+        for canal, n, v, rp in zip(
             parrilla.loc[asignado, "canal"],
             parrilla.loc[asignado, "cantidad_productos"],
             parrilla.loc[asignado, "valor_total"],
+            parrilla.loc[asignado, "reglas_prioridad"],
         )
     ]
     con_paquete = set(paquetes["id_cliente"]) if not paquetes.empty else set()
@@ -943,7 +1073,10 @@ def construir_parrilla(
         "Sin cupo disponible en sus canales para esta corrida"
     )
     return parrilla[
-        ["id_cliente", "estado", "canal", "campana_1", "campana_2", "razon"]
+        [
+            "id_cliente", "estado", "canal", "canal_secundario", "canales_alternos",
+            "campana_1", "campana_2", "razon",
+        ]
     ]
 
 
@@ -989,7 +1122,9 @@ def validar_parrilla(
     )
     registrar(
         "R13_UN_CANAL",
-        (p["estado"] == "sin_accion") & p[["canal", "campana_1", "campana_2"]].notna().any(axis=1),
+        (p["estado"] == "sin_accion")
+        & p[[c for c in ("canal", "canal_secundario", "campana_1", "campana_2") if c in p.columns]]
+        .notna().any(axis=1),
         p["id_cliente"],
         "Sin accion con datos de contacto",
     )
@@ -1256,7 +1391,8 @@ def ejecutar_orquestador(
     )
     cupos = leer_cupos(parametros)
     asignacion = asignar(paquetes, cupos, parametros)
-    parrilla = construir_parrilla(datos, asignacion, diagnostico, parametros)
+    secundarios = sugerir_canal_secundario(paquetes, asignacion, cupos, parametros)
+    parrilla = construir_parrilla(datos, asignacion, diagnostico, parametros, secundarios)
     detalle, ofertas = validar_parrilla(
         parrilla, datos, campanas, reglas, parametros, fecha
     )
@@ -1504,6 +1640,11 @@ def resumen_ejecucion(
             .sort_values("valor", ascending=False)
         )
         cupos = resultado.get("cupos", {})
+        if "canal_secundario" in parrilla.columns:
+            sec = parrilla["canal_secundario"].dropna().value_counts()
+        else:
+            sec = pd.Series(dtype=int)
+        canal_df["secundario"] = canal_df["canal"].map(sec).fillna(0).astype(int)
         canal_df["cupo"] = canal_df["canal"].map(cupos)
         canal_df["uso_pct"] = (
             canal_df["clientes"] / canal_df["cupo"].replace(0, np.nan) * 100
@@ -1630,6 +1771,15 @@ def ejecutar_desde_consola(body: Dict[str, Any]) -> Dict[str, Any]:
     avisos = validar_configuracion(campanas, reglas, parametros)
     config_dir = STATE["config_dir"] or localizar_config_dir()
     datos = cargar_datos(Path(config_dir), dataset)
+    canales_usados = sorted({
+        c.strip() for v in campanas["canales_permitidos"] for c in str(v).split("|") if c.strip()
+    })
+    sin_score = [c for c in canales_usados if f"score_canal_{c}" not in datos.columns]
+    if sin_score:
+        avisos.append(
+            "Canales sin columna score_canal_<canal> en el dataset (no recibiran clientes): "
+            + ", ".join(sin_score)
+        )
 
     fecha_eval = pd.Timestamp(fecha)
     activas = campanas.loc[
@@ -1681,6 +1831,122 @@ def ejecutar_desde_consola(body: Dict[str, Any]) -> Dict[str, Any]:
         )
         STATE["historial"] = STATE["historial"][:20]
     return resumen
+
+
+COLUMNAS_CACHE: Dict[int, List[Dict[str, Any]]] = {}
+
+
+def columnas_dataset(dataset: str) -> List[Dict[str, Any]]:
+    """Columnas de la base de clientes con su tipo y valores de ejemplo."""
+    config_dir = STATE["config_dir"] or localizar_config_dir()
+    datos = cargar_datos(Path(config_dir), dataset)
+    clave = id(datos)
+    if clave in COLUMNAS_CACHE:
+        return COLUMNAS_CACHE[clave]
+    salida: List[Dict[str, Any]] = []
+    for col in datos.columns:
+        serie = datos[col]
+        if pd.api.types.is_bool_dtype(serie):
+            tipo = "booleano"
+        elif pd.api.types.is_numeric_dtype(serie):
+            tipo = "numero"
+        else:
+            tipo = "texto"
+        distintos = serie.dropna().unique()
+        n_distintos = int(len(distintos))
+        if tipo == "numero" and n_distintos > 0:
+            if n_distintos <= 2 and set(pd.Series(distintos).astype(float)) <= {0.0, 1.0}:
+                tipo = "binario"
+        ejemplos = [_json_seguro(v) for v in distintos[:4]]
+        salida.append(
+            {
+                "nombre": str(col),
+                "tipo": tipo,
+                "distintos": n_distintos,
+                "ejemplos": ejemplos,
+                "min": _json_seguro(serie.min()) if tipo in ("numero", "binario") else None,
+                "max": _json_seguro(serie.max()) if tipo in ("numero", "binario") else None,
+            }
+        )
+    COLUMNAS_CACHE.clear()
+    COLUMNAS_CACHE[clave] = salida
+    return salida
+
+
+def consultar_parrilla(
+    estado: str = "",
+    canal: str = "",
+    campana: str = "",
+    pagina: int = 1,
+    tamano: int = 100,
+) -> Dict[str, Any]:
+    """Filtra la parrilla completa y devuelve una pagina."""
+    resultado = STATE.get("resultado")
+    if resultado is None:
+        raise ValueError("Todavia no hay una parrilla generada. Ejecute el motor.")
+    p = resultado["parrilla"]
+    mask = pd.Series(True, index=p.index)
+    if estado:
+        mask &= p["estado"] == estado
+    if canal:
+        mask &= p["canal"] == canal
+    if campana:
+        mask &= (p["campana_1"] == campana) | (p["campana_2"] == campana)
+    filtrada = p.loc[mask]
+
+    tamano = max(10, min(int(tamano), 1000))
+    total = int(len(filtrada))
+    paginas = max(1, math.ceil(total / tamano))
+    pagina = max(1, min(int(pagina), paginas))
+    inicio = (pagina - 1) * tamano
+
+    campanas = sorted(
+        set(p["campana_1"].dropna().astype(str)) | set(p["campana_2"].dropna().astype(str))
+    )
+    return {
+        "ok": True,
+        "filas": df_registros(filtrada.iloc[inicio:inicio + tamano]),
+        "total": total,
+        "total_parrilla": int(len(p)),
+        "pagina": pagina,
+        "paginas": paginas,
+        "tamano": tamano,
+        "opciones": {
+            "estado": sorted(p["estado"].dropna().astype(str).unique().tolist()),
+            "canal": sorted(p["canal"].dropna().astype(str).unique().tolist()),
+            "campana": campanas,
+        },
+    }
+
+
+def cambiar_canal_secundario(id_cliente: Any, canal: Optional[str]) -> Dict[str, Any]:
+    """Asigna (o quita, con canal vacio) el canal secundario de un cliente."""
+    resultado = STATE.get("resultado")
+    if resultado is None:
+        raise ValueError("Todavia no hay una parrilla generada. Ejecute el motor.")
+    parrilla = resultado["parrilla"]
+    fila = parrilla["id_cliente"].astype(str) == str(id_cliente)
+    if not fila.any():
+        raise ValueError(f"Cliente {id_cliente} no esta en la parrilla.")
+    idx = parrilla.index[fila][0]
+    if parrilla.at[idx, "estado"] != "asignado":
+        raise ValueError("Solo los clientes asignados pueden tener canal secundario.")
+
+    if canal:
+        canal = str(canal).strip()
+        alternos = str(parrilla.at[idx, "canales_alternos"] or "")
+        if pd.isna(parrilla.at[idx, "canales_alternos"]) or canal not in alternos.split("|"):
+            raise ValueError(f"El canal {canal} no es valido como secundario para este cliente.")
+        parrilla.at[idx, "canal_secundario"] = canal
+    else:
+        parrilla.at[idx, "canal_secundario"] = np.nan
+
+    STATE["parrilla_csv"] = parrilla.to_csv(index=False).encode("utf-8-sig")
+    return {
+        "ok": True,
+        "id_cliente": _json_seguro(parrilla.at[idx, "id_cliente"]),
+        "canal_secundario": _json_seguro(parrilla.at[idx, "canal_secundario"]),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1765,6 +2031,17 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
                 return self._json({"ok": True, "historial": STATE["historial"]})
         if ruta == "/api/parrilla.csv":
             return self._servir_parrilla()
+        if ruta == "/api/parrilla":
+            return self._servir_parrilla_paginada()
+        if ruta == "/api/columnas":
+            q = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+            dataset = q.get("dataset") or STATE["dataset"] or DEFAULT_DATASET
+            try:
+                with STATE_LOCK:
+                    columnas = columnas_dataset(dataset)
+                return self._json({"ok": True, "dataset": dataset, "columnas": columnas})
+            except Exception as exc:
+                return self._error(str(exc), 400)
         return self._error("Ruta no encontrada", 404)
 
     def do_POST(self) -> None:  # noqa: N802
@@ -1780,6 +2057,8 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
             return self._manejar_save(body)
         if ruta == "/api/reset":
             return self._manejar_reset()
+        if ruta == "/api/canal_secundario":
+            return self._manejar_canal_secundario(body)
         if ruta == "/api/history/clear":
             with STATE_LOCK:
                 STATE["historial"] = []
@@ -1901,6 +2180,21 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
             extra={"Content-Disposition": f'attachment; filename="{nombre}"'},
         )
 
+    def _servir_parrilla_paginada(self) -> None:
+        q = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
+        try:
+            with STATE_LOCK:
+                datos = consultar_parrilla(
+                    estado=q.get("estado", ""),
+                    canal=q.get("canal", ""),
+                    campana=q.get("campana", ""),
+                    pagina=int(q.get("pagina", 1) or 1),
+                    tamano=int(q.get("tamano", 100) or 100),
+                )
+            self._json(datos)
+        except Exception as exc:
+            self._error(str(exc), 400)
+
     def _manejar_run(self, body: Dict[str, Any]) -> None:
         try:
             with STATE_LOCK:
@@ -1908,6 +2202,17 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
             self._json(resumen)
         except Exception as exc:
             self._error(str(exc), 400, traceback.format_exc(limit=4))
+
+    def _manejar_canal_secundario(self, body: Dict[str, Any]) -> None:
+        """Cambia el canal secundario de un cliente en la parrilla vigente."""
+        try:
+            with STATE_LOCK:
+                resumen = cambiar_canal_secundario(
+                    body.get("id_cliente"), body.get("canal") or None
+                )
+            self._json(resumen)
+        except Exception as exc:
+            self._error(str(exc), 400)
 
     def _manejar_reset(self) -> None:
         """Vuelve a leer los CSV originales del proyecto."""
