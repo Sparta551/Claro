@@ -1,0 +1,12 @@
+id,nombre,tipo,alcance_nivel,alcance_valores,atributo,operador,valor,accion,activa
+R01,Sin venta a clientes en mora,elegibilidad,global,,en_mora,==,1,excluir,1
+R02,"Terminales solo con calificacion E, A o B",elegibilidad,campana,C-TER,calificacion_riesgo,en,C|P,excluir,1
+R03,Terminales solo con equipo de 18 meses o mas,elegibilidad,campana,C-TER,edad_equipo_meses,<,18,excluir,1
+R04,Venta cruzada Hogar solo a quien no tiene Hogar,elegibilidad,campana,C-VCH,tiene_hogar,==,1,excluir,1
+R05,Upgrade OTT solo si le falta alguna OTT,elegibilidad,campana,C-OTT,cantidad_ott,>=,3,excluir,1
+R06,No repetir un producto ya ofertado en el mes,elegibilidad,global,,productos_ofertados_mes,contiene,$producto,excluir,1
+R07,Sin venta a clientes con 3 o mas quejas,elegibilidad,global,,quejas_90d,>=,3,excluir,1
+R08,WhatsApp requiere autorizacion,canal,canal,whatsapp,autoriza_whatsapp,==,0,excluir,1
+R09,Correo requiere autorizacion,canal,canal,correo,autoriza_correo,==,0,excluir,1
+R10,SMS requiere autorizacion,canal,canal,sms,autoriza_sms,==,0,excluir,1
+R11,Maximo 2 llamadas de asesor al mes,canal,canal,asesor,contactos_asesor_mes,>=,2,excluir,1

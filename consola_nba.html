@@ -822,7 +822,7 @@ function renderDatasets() {
   const cont = $("#datasets");
   cont.innerHTML = state.datasets.map((d) => {
     const meta = DATASET_META[d.id] || { titulo: d.id, detalle: d.etiqueta };
-    return `<button class="dataset ${state.dataset === d.id ? "active" : ""}" data-dataset="${esc(d.id)}" ${d.existe ? "" : "disabled title='Archivo no encontrado'"}>
+    return `<button class="dataset ${state.dataset === d.id ? "active" : ""}" data-dataset="${esc(d.id)}" ${d.existe ? "" : `disabled title="${esc(d.motivo || "Archivo no encontrado")}"`}>
       <b>${esc(meta.titulo)}</b><span>${esc(meta.detalle)}${d.existe ? "" : " · no disponible"}</span>
     </button>`;
   }).join("");
@@ -1217,7 +1217,7 @@ async function ejecutar() {
   }
   const ds = state.datasets.find((d) => d.id === state.dataset);
   if (ds && !ds.existe) {
-    toast("error", "Dataset no disponible", `No se encontró ${ds.archivo}.`);
+    toast("error", "Dataset no disponible", ds.motivo || `No se encontró ${ds.archivo}.`);
     return;
   }
 
