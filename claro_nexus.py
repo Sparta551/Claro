@@ -22,6 +22,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import os
 import re
 import sys
 import threading
@@ -51,6 +52,7 @@ APP_DIR = Path(__file__).resolve().parent
 DEFAULT_FECHA = "2026-11-04"
 DEFAULT_DATASET = "full"
 DEFAULT_OUT = "parrilla_100k.csv"
+DIR_PARRILLAS = "parrillas"  # carpeta (junto al script) donde se guardan las parrillas
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
@@ -66,8 +68,7 @@ PARAMETROS_COLUMNS = ["parametro", "valor"]
 
 DATASETS = {
     "demo": ("casos_ejemplo_clientes.csv", "Demostracion (5 clientes)"),
-    "full": ("CLARO_NEXUS_parrilla_100k.csv", "Base completa (100.000 clientes)"),
-    "synthetic": ("CLARO_NEXUS_clientes_sinteticos_5000.csv", "Sintetica (5.000 clientes)"),
+    "full": ("clientes 1.csv", "Base completa (100.000 clientes)")
 }
 OPERADORES = {"==", "!=", ">", ">=", "<", "<=", "en", "not_en", "contiene", "no_contiene"}
 DATA_CACHE: Dict[str, pd.DataFrame] = {}
@@ -75,13 +76,154 @@ DATA_CACHE: Dict[str, pd.DataFrame] = {}
 # ---------------------------------------------------------------------------
 # Utilidades de configuracion y datos
 # ---------------------------------------------------------------------------
+CARPETAS_IGNORADAS = {
+    "__pycache__", "node_modules", "venv", ".venv", "env", "site-packages",
+    "config_guardada",  # copias que genera la consola; no son la config activa
+}
+PROFUNDIDAD_BUSQUEDA = 4
+
+
+def _subcarpetas(base: Path, max_prof: int = PROFUNDIDAD_BUSQUEDA) -> List[Path]:
+    """Devuelve base y sus subcarpetas, de menor a mayor profundidad."""
+    resultado: List[Path] = []
+    nivel = [Path(base)]
+    for prof in range(max_prof + 1):
+        siguiente: List[Path] = []
+        for d in nivel:
+            resultado.append(d)
+            if prof == max_prof:
+                continue
+            try:
+                with os.scandir(d) as it:
+                    for e in sorted(it, key=lambda x: x.name.lower()):
+                        if (
+                            e.is_dir(follow_symlinks=False)
+                            and not e.name.startswith(".")
+                            and e.name not in CARPETAS_IGNORADAS
+                        ):
+                            siguiente.append(Path(e.path))
+            except (OSError, PermissionError):
+                continue
+        nivel = siguiente
+    return resultado
+
+
+def _buscar_config_dir(base: Path) -> Optional[Path]:
+    """Busca, en base y sus subcarpetas, una carpeta con los tres CSV de config."""
+    try:
+        base = Path(base).expanduser().resolve()
+    except Exception:
+        return None
+    if not base.is_dir():
+        return None
+    for d in _subcarpetas(base):
+        if _es_config_dir(d):
+            return d
+    return None
+
+
+def _es_base_clientes(ruta: Path) -> bool:
+    """True si el CSV parece una base de entrada (id_cliente + columnas score_*)."""
+    try:
+        cols = pd.read_csv(ruta, nrows=0).columns
+    except Exception:
+        return False
+    return "id_cliente" in cols and any(str(c).startswith("score_") for c in cols)
+
+
+def _buscar_archivo(nombre: str, raices: Sequence[Path]) -> Optional[Path]:
+    """Busca un archivo por nombre en las raices y sus subcarpetas.
+
+    Si hay varios con el mismo nombre, prefiere el que sea una base de clientes
+    valida (con columnas score_*), no una parrilla de salida.
+    """
+    vistos = set()
+    coincidencias: List[Path] = []
+    for raiz in raices:
+        try:
+            raiz = Path(raiz).expanduser().resolve()
+        except Exception:
+            continue
+        if not raiz.is_dir():
+            continue
+        for d in _subcarpetas(raiz):
+            f = d / nombre
+            if f in vistos:
+                continue
+            vistos.add(f)
+            if f.is_file():
+                coincidencias.append(f)
+    for f in coincidencias:
+        if _es_base_clientes(f):
+            return f
+    return coincidencias[0] if coincidencias else None
+
+
+def _raices_datos(data_dir: Path) -> List[Path]:
+    """Carpetas (y sus subcarpetas) donde se buscan las bases de clientes."""
+    return [Path(data_dir), APP_DIR, Path.cwd()]
+
+
+def descubrir_bases(data_dir: Path, maximo: int = 300) -> List[Path]:
+    """Detecta CSV que parecen bases de clientes (id_cliente + columnas score_*),
+    sin importar su nombre. Ignora config_*.csv y la carpeta de parrillas."""
+    vistos = set()
+    bases: List[Path] = []
+    examinados = 0
+    for raiz in _raices_datos(data_dir):
+        try:
+            raiz = Path(raiz).expanduser().resolve()
+        except Exception:
+            continue
+        if not raiz.is_dir():
+            continue
+        for d in _subcarpetas(raiz):
+            if d.name == DIR_PARRILLAS:
+                continue
+            try:
+                archivos = sorted(d.glob("*.csv"), key=lambda x: x.name.lower())
+            except OSError:
+                continue
+            for f in archivos:
+                if f in vistos or f.name.lower().startswith("config_"):
+                    continue
+                vistos.add(f)
+                examinados += 1
+                if examinados > maximo:
+                    return bases
+                if _es_base_clientes(f):
+                    bases.append(f)
+    return bases
+
+
+def _contar_clientes(ruta: Path) -> int:
+    try:
+        with open(ruta, "rb") as fh:
+            return max(sum(1 for _ in fh) - 1, 0)
+    except OSError:
+        return 0
+
+
+def localizar_dataset(data_dir: Path, clave: str) -> Optional[Path]:
+    """Ruta de un dataset conocido (demo/full/synthetic) o None si no existe."""
+    if clave not in DATASETS:
+        return None
+    return _buscar_archivo(DATASETS[clave][0], _raices_datos(data_dir))
+
+
 def localizar_config_dir(config_dir: Optional[str] = None) -> Path:
-    """Ubica la carpeta que contiene config_campanas/reglas/parametros."""
+    """Ubica la carpeta que contiene config_campanas/reglas/parametros.
+
+    Busca tambien dentro de subcarpetas (hasta PROFUNDIDAD_BUSQUEDA niveles).
+    """
     if config_dir:
         p = Path(config_dir).expanduser().resolve()
-        if not _es_config_dir(p):
-            raise FileNotFoundError(f"No encontre la configuracion en: {p}")
-        return p
+        if _es_config_dir(p):
+            return p
+        hallado = _buscar_config_dir(p)
+        if hallado:
+            return hallado
+        raise FileNotFoundError(f"No encontre la configuracion en: {p} (ni en sus subcarpetas)")
 
     candidatos: List[Path] = [Path.cwd(), APP_DIR]
     try:
@@ -102,9 +244,16 @@ def localizar_config_dir(config_dir: Optional[str] = None) -> Path:
         if _es_config_dir(p):
             return p
 
+    # Segunda pasada: buscar en subcarpetas de la carpeta actual y de la del script.
+    for raiz in (Path.cwd(), APP_DIR):
+        hallado = _buscar_config_dir(raiz)
+        if hallado:
+            return hallado
+
     raise FileNotFoundError(
-        "No encontre config_campanas.csv, config_reglas.csv y config_parametros.csv. "
-        "Use --config-dir o ejecute el script desde la carpeta del proyecto."
+        "No encontre config_campanas.csv, config_reglas.csv y config_parametros.csv "
+        f"(busque en {Path.cwd()} y {APP_DIR}, incluyendo subcarpetas). "
+        "Use --config-dir para indicar la carpeta."
     )
 
 
@@ -244,19 +393,47 @@ def guardar_configuracion(
 
 def cargar_datos(data_dir: Path, dataset: str = DEFAULT_DATASET) -> pd.DataFrame:
     data_dir = Path(data_dir).resolve()
+    raices = _raices_datos(data_dir)
     if dataset in DATASETS:
         nombre = DATASETS[dataset][0]
-        ruta = data_dir / nombre
+        ruta = _buscar_archivo(nombre, raices)
+        if dataset == DEFAULT_DATASET and (ruta is None or not _es_base_clientes(ruta)):
+            # La base completa puede llamarse distinto (p. ej. "clientes 1.csv").
+            excluir = {DATASETS[k][0] for k in DATASETS if k != DEFAULT_DATASET}
+            otras = [b for b in descubrir_bases(data_dir) if b.name not in excluir]
+            if len(otras) == 1:
+                ruta = otras[0]
+                print(f"Base de clientes detectada automaticamente: {ruta}")
+            elif len(otras) > 1:
+                lista = "\n  - ".join(str(b) for b in otras)
+                raise FileNotFoundError(
+                    f"No encontre '{nombre}' y hay varias bases posibles:\n  - {lista}\n"
+                    "Indique cual usar con --dataset \"<nombre del archivo>\"."
+                )
     else:
-        ruta = Path(dataset).expanduser().resolve()
-    if not ruta.exists():
-        raise FileNotFoundError(f"No encontre el archivo de clientes: {ruta}")
+        candidata = Path(dataset).expanduser()
+        nombre = candidata.name
+        ruta = candidata.resolve() if candidata.is_file() else _buscar_archivo(nombre, raices)
+    if ruta is None or not ruta.exists():
+        raise FileNotFoundError(
+            f"No encontre el archivo de clientes '{nombre}' en {data_dir}, "
+            f"{APP_DIR} ni {Path.cwd()} (incluyendo subcarpetas)."
+        )
 
     clave = f"{ruta}|{ruta.stat().st_mtime_ns}"
     if clave not in DATA_CACHE:
         df = pd.read_csv(ruta)
         if "id_cliente" not in df.columns:
             raise ValueError("El archivo de clientes no tiene la columna id_cliente.")
+        if (
+            not any(str(c).startswith("score_") for c in df.columns)
+            and {"estado", "canal", "campana_1"} <= set(df.columns)
+        ):
+            raise ValueError(
+                f"'{ruta}' parece una parrilla de SALIDA (estado, canal, campana_1...), "
+                "no la base de clientes de entrada con columnas score_*. "
+                "Renombre la parrilla o coloque la base de entrada con el nombre esperado."
+            )
         if df["id_cliente"].duplicated().any():
             raise ValueError("El archivo de clientes tiene id_cliente duplicados.")
         DATA_CACHE.clear()
@@ -1611,10 +1788,10 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
 
     # -- implementaciones ---------------------------------------------------
     def _servir_consola(self) -> None:
-        archivo = APP_DIR / "consola_nba.html"
+        archivo = _buscar_archivo("consola_nba.html", [APP_DIR, Path.cwd()]) or (APP_DIR / "consola_nba.html")
         if not archivo.exists():
             return self._error(
-                "No encontre consola_nba.html junto a claro_nexus.py", 500
+                "No encontre consola_nba.html junto a claro_nexus.py ni en sus subcarpetas", 500
             )
         self._enviar(
             archivo.read_bytes(),
@@ -1631,18 +1808,19 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
         if campanas is None:
             return self._error("Configuracion no cargada", 500)
         avisos = validar_configuracion(campanas, reglas, parametros)
+        lista_ds = self._lista_datasets()
         self._json(
             {
                 "ok": True,
                 "config_dir": str(config_dir),
-                "dataset": STATE["dataset"],
+                "dataset": self._dataset_activo(lista_ds),
                 "fecha": STATE["fecha"],
                 "campanas": df_registros(campanas),
                 "reglas": df_registros(reglas),
                 "parametros": df_registros(parametros),
                 "avisos": avisos,
                 "ortools": ORTOOLS_OK,
-                "datasets": self._lista_datasets(),
+                "datasets": lista_ds,
                 "historial": STATE["historial"],
                 "columnas": {
                     "campanas": CAMPANAS_COLUMNS,
@@ -1652,19 +1830,59 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
             }
         )
 
+    @staticmethod
+    def _dataset_activo(lista: List[Dict[str, Any]]) -> str:
+        """El dataset del estado si existe; si no, el primero disponible."""
+        actual = STATE["dataset"]
+        disponibles = [d["id"] for d in lista if d["existe"]]
+        if actual in disponibles or not disponibles:
+            return actual
+        return disponibles[0]
+
     def _lista_datasets(self) -> List[Dict[str, Any]]:
         config_dir = Path(STATE["config_dir"] or APP_DIR)
-        salida = []
+        salida: List[Dict[str, Any]] = []
+        rutas_vistas = set()
         for clave, (nombre, etiqueta) in DATASETS.items():
-            ruta = config_dir / nombre
+            ruta = localizar_dataset(config_dir, clave)
+            valido = ruta is not None and _es_base_clientes(ruta)
+            if ruta is None:
+                motivo = f"No se encontro {nombre}"
+            elif not valido:
+                motivo = f"{ruta.name} no es una base de clientes (faltan id_cliente y columnas score_*)"
+            else:
+                motivo = ""
+                rutas_vistas.add(ruta.resolve())
             salida.append(
                 {
                     "id": clave,
                     "archivo": nombre,
                     "etiqueta": etiqueta,
-                    "existe": ruta.exists(),
+                    "existe": valido,
+                    "ruta": str(ruta) if ruta else "",
+                    "motivo": motivo,
                 }
             )
+        # Bases con cualquier otro nombre (p. ej. "clientes 1.csv")
+        nombres_usados = {d["archivo"] for d in salida if d["existe"]}
+        for f in descubrir_bases(config_dir):
+            if f.resolve() in rutas_vistas or f.name in nombres_usados:
+                continue
+            nombres_usados.add(f.name)
+            salida.append(
+                {
+                    "id": f.name,
+                    "archivo": f.name,
+                    "etiqueta": f"Base detectada ({_contar_clientes(f):,} clientes)",
+                    "existe": True,
+                    "ruta": str(f),
+                    "motivo": "",
+                }
+            )
+        # Si hay alguna base valida, ocultar las estandar que no sirven
+        # (si no hay ninguna, se muestran todas con el motivo).
+        if any(d["existe"] for d in salida):
+            salida = [d for d in salida if d["existe"]]
         return salida
 
     def _servir_datasets(self) -> None:
@@ -1676,7 +1894,7 @@ class NexusHTTPHandler(BaseHTTPRequestHandler):
             resumen = STATE["resumen"]
         if not csv:
             return self._error("Todavia no hay una parrilla generada. Ejecute el motor.", 404)
-        nombre = f"CLARO_NEXUS_parrilla_{resumen.get('dataset', DEFAULT_DATASET)}.csv"
+        nombre = f"CLARO_NEXUS_parrilla_{Path(str(resumen.get('dataset', DEFAULT_DATASET))).stem}.csv"
         self._enviar(
             csv,
             "text/csv; charset=utf-8",
@@ -1821,11 +2039,18 @@ def comando_run(args: argparse.Namespace) -> int:
         print("-" * 60)
         print(detalle["restriccion"].value_counts().to_string())
 
-    salida = Path(args.out) if args.out else (
-        Path(DEFAULT_OUT) if args.dataset == DEFAULT_DATASET
-        else config_dir / f"CLARO_NEXUS_parrilla_{args.dataset}.csv"
-    )
-    salida = salida.expanduser().resolve()
+    carpeta_parrillas = APP_DIR / DIR_PARRILLAS
+    if args.out:
+        salida = Path(args.out).expanduser()
+        # Solo un nombre de archivo -> va a la carpeta de parrillas.
+        # Si trae ruta (carpeta), se respeta tal cual.
+        if salida.parent == Path("."):
+            salida = carpeta_parrillas / salida.name
+    elif args.dataset == DEFAULT_DATASET:
+        salida = carpeta_parrillas / DEFAULT_OUT
+    else:
+        salida = carpeta_parrillas / f"CLARO_NEXUS_parrilla_{Path(str(args.dataset)).stem}.csv"
+    salida = salida.resolve()
     salida.parent.mkdir(parents=True, exist_ok=True)
     resultado["parrilla"].to_csv(salida, index=False, encoding="utf-8-sig")
     print("")
@@ -1882,13 +2107,13 @@ def construir_parser() -> argparse.ArgumentParser:
 
     p_run = sub.add_parser("run", help="Ejecuta el motor y exporta la parrilla")
     comunes(p_run)
-    p_run.add_argument("--dataset", default=DEFAULT_DATASET, choices=["demo", "full", "synthetic"], help="Dataset a usar (por defecto full)")
-    p_run.add_argument("--out", help="Ruta del CSV de salida")
+    p_run.add_argument("--dataset", default=DEFAULT_DATASET, help="demo, full, synthetic, o el nombre/ruta de un CSV de clientes (por defecto full)")
+    p_run.add_argument("--out", help=f"CSV de salida (solo nombre -> se guarda en la carpeta {DIR_PARRILLAS}/; con ruta se respeta)")
     p_run.set_defaults(func=comando_run)
 
     p_serve = sub.add_parser("serve", help="Levanta la consola web local")
     comunes(p_serve)
-    p_serve.add_argument("--dataset", default=DEFAULT_DATASET, choices=["demo", "full", "synthetic"])
+    p_serve.add_argument("--dataset", default=DEFAULT_DATASET, help="demo, full, synthetic, o el nombre/ruta de un CSV de clientes")
     p_serve.add_argument("--host", default=DEFAULT_HOST)
     p_serve.add_argument("--port", type=int, default=DEFAULT_PORT)
     p_serve.add_argument("--open", action="store_true", help="Abre la consola en el navegador")
@@ -1926,6 +2151,3 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-
-

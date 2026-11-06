@@ -1,0 +1,4 @@
+id,nombre,producto,objetivo,columna_score,valor_negocio,canales_permitidos,vigencia_inicio,vigencia_fin,activa
+C-VCH,Venta cruzada Hogar,VCH,Venta cruzada,score_venta_cruzada_hogar,1.0,asesor|whatsapp|correo|sms,2026-11-01,2026-12-31,1
+C-TER,Renovacion de terminal,TER,Terminales,score_terminales,0.8,asesor|whatsapp|correo|sms,2026-11-01,2026-12-31,1
+C-OTT,"Upgrade OTT (Netflix, Amazon Prime, Win)",OTT,Upgrade,score_upgrade_ott,0.4,whatsapp|correo|sms,2026-11-01,2026-12-31,1
