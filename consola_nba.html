@@ -466,6 +466,43 @@ select.col-select.warn{border-color:#f5a524}
 .paginador{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:10px}
 .paginador .btn:disabled{opacity:.4;cursor:default}
 select.sec-canal{padding:3px 6px;border-radius:7px;font-size:11.5px;min-width:110px}
+
+/* gráficos */
+.graficos-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.graficos-toolbar .input{max-width:280px}
+.graficos-toolbar .chip{white-space:nowrap}
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(430px,1fr));gap:16px}
+@media (max-width:560px){.charts-grid{grid-template-columns:1fr}}
+.chart-card{background:#fff;border:1px solid #e4e4e4;border-radius:12px;box-shadow:0 4px 18px rgba(22,22,22,.035);padding:18px;min-width:0}
+.chart-card.wide{grid-column:1/-1}
+.chart-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:14px}
+.chart-head h4{margin:0;font-size:14px;font-weight:700}
+.chart-head p{margin:3px 0 0;color:var(--muted);font-size:11.5px}
+.chart-head .spacer{flex:1}
+.chart-legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:12px}
+.chart-legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:11.5px;font-weight:600}
+.chart-dot{width:9px;height:9px;border-radius:3px;flex:0 0 auto}
+.chart-row{display:grid;grid-template-columns:minmax(90px,160px) 1fr;gap:10px;align-items:center;margin:9px 0}
+.chart-row.with-value{grid-template-columns:minmax(90px,160px) 1fr minmax(48px,78px)}
+.chart-label{font-size:12px;color:#2b2b2b;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-bars{display:flex;flex-direction:column;gap:4px;min-width:0}
+.chart-mini{display:grid;grid-template-columns:minmax(56px,78px) 1fr minmax(42px,64px);gap:7px;align-items:center}
+.chart-mini.solo{grid-template-columns:1fr minmax(42px,64px)}
+.chart-mini .serie{font-size:10.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-track{height:12px;background:#f1f1f1;border-radius:999px;overflow:hidden;min-width:40px}
+.chart-track.tall{height:16px}
+.chart-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#ee2a26,#ff6b5e);transition:width .35s ease}
+.chart-fill.blue{background:linear-gradient(90deg,#4f8cff,#7aa8ff)}
+.chart-fill.green{background:linear-gradient(90deg,#22c55e,#7ee2a4)}
+.chart-fill.amber{background:linear-gradient(90deg,#f5a524,#ffb84d)}
+.chart-fill.hot{background:linear-gradient(90deg,#f5a524,#c9211e)}
+.chart-value{font-size:11px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chart-sub{color:var(--muted-2);font-size:10.5px;margin-top:3px}
+.chart-stack{display:flex;height:16px;border-radius:999px;overflow:hidden;background:#f1f1f1;min-width:40px}
+.chart-stack span{display:block;height:100%;min-width:0}
+.chart-empty{padding:18px;text-align:center;color:var(--muted);font-size:12.5px}
+.chart-summary{display:flex;flex-wrap:wrap;gap:8px 22px;color:var(--muted);font-size:12px;margin-bottom:16px}
+.chart-summary b{color:var(--text)}
 </style>
 
 </head>
@@ -491,6 +528,7 @@ select.sec-canal{padding:3px 6px;border-radius:7px;font-size:11.5px;min-width:11
 
 <nav class="tabs" role="tablist">
   <button class="tab active" data-tab="ejecucion" role="tab">Ejecución</button>
+  <button class="tab" data-tab="graficos" role="tab">Gráficos</button>
   <button class="tab" data-tab="campanas" role="tab">Campañas <span class="count" id="countCampanas">0</span></button>
   <button class="tab" data-tab="reglas" role="tab">Reglas <span class="count" id="countReglas">0</span></button>
   <button class="tab" data-tab="parametros" role="tab">Parámetros <span class="count" id="countParams">0</span></button>
@@ -617,6 +655,27 @@ select.sec-canal{padding:3px 6px;border-radius:7px;font-size:11.5px;min-width:11
           <button class="btn small ghost" data-pag="ultima">Última »</button>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ================= GRAFICOS ================= -->
+  <section class="view" id="view-graficos">
+    <div class="section-head">
+      <div>
+        <h2>Gráficos de la asignación</h2>
+        <p>Visualice clientes asignados, productos ofrecidos y uso de cupos por canal, y cómo se distribuyen entre las variables del dataset. Los gráficos se calculan sobre la última corrida del motor.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="btnGraficosRefresh">↻ Actualizar</button>
+    </div>
+    <div class="panel">
+      <div class="graficos-toolbar">
+        <label class="field-label" for="graficoVariable" style="margin:0">Variable del dataset</label>
+        <select class="input" id="graficoVariable"><option value="">Cargando…</option></select>
+        <span class="chip" id="graficoInfo">sin corrida</span>
+        <span class="hint" id="graficoHint">Ejecute el motor para habilitar los gráficos.</span>
+      </div>
+      <div id="graficosBox"></div>
     </div>
   </section>
 
@@ -763,6 +822,8 @@ const state = {
   ortools: false,
   originalParams: {},
   lastRun: null,
+  graficos: null,
+  graficoVariable: "",
   dirty: false,
   busy: false,
 };
@@ -822,6 +883,7 @@ $$(".tab").forEach((tab) => {
     tab.setAttribute("aria-selected", "true");
     $(`#view-${tab.dataset.tab}`).classList.add("active");
     if (tab.dataset.tab === "historial") cargarHistorial();
+    if (tab.dataset.tab === "graficos") cargarGraficos();
   });
 });
 
@@ -866,6 +928,20 @@ const PARAM_HELP = {
   "politica_contacto.canales_por_cliente": "Canales por cliente. El motor asigna 1 principal (con cupo) y sugiere 1 secundario (no consume cupo).",
   "politica_contacto.max_contactos_semana": "Clientes con este número de contactos quedan fuera.",
 };
+
+const ORDEN_PARAM_CALIFICACION = ["E", "A", "B", "C", "P"];
+const PREF_PARAM_CALIFICACION = "riesgo.factor_calificacion.";
+
+function compararParametros(a, b) {
+  const pa = String(a.parametro);
+  const pb = String(b.parametro);
+  if (pa.startsWith(PREF_PARAM_CALIFICACION) && pb.startsWith(PREF_PARAM_CALIFICACION)) {
+    const ia = ORDEN_PARAM_CALIFICACION.indexOf(pa.slice(PREF_PARAM_CALIFICACION.length).toUpperCase());
+    const ib = ORDEN_PARAM_CALIFICACION.indexOf(pb.slice(PREF_PARAM_CALIFICACION.length).toUpperCase());
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  }
+  return pa.localeCompare(pb);
+}
 
 function helpParam(nombre) {
   if (PARAM_HELP[nombre]) return PARAM_HELP[nombre];
@@ -1169,7 +1245,7 @@ function renderParams() {
   $("#paramsGrid").innerHTML = nombres.map((grupo) => {
     const filas = grupos.get(grupo)
       .slice()
-      .sort((a, b) => String(a.parametro).localeCompare(String(b.parametro)))
+      .sort(compararParametros)
       .map((p) => {
         const nombre = String(p.parametro);
         const original = state.originalParams[nombre];
@@ -1472,6 +1548,7 @@ function renderResultados(run) {
 
   renderAvisos(run.avisos || []);
   $("#btnDescargar").disabled = false;
+  if ($("#view-graficos").classList.contains("active")) cargarGraficos();
 }
 
 /* ===================== muestra de la parrilla ===================== */
@@ -1601,6 +1678,165 @@ document.addEventListener("change", async (ev) => {
     sel.disabled = false;
   }
 });
+
+/* ============================ gráficos ============================ */
+const CHART_COLORS = ["#ee2a26", "#4f8cff", "#22c55e", "#f5a524", "#8b5cf6", "#14b8a6", "#ec4899", "#64748b", "#0ea5e9", "#84cc16"];
+
+function colorSerie(i) {
+  return CHART_COLORS[i % CHART_COLORS.length];
+}
+
+function chartLegend(series) {
+  if (series.length < 2) return "";
+  return `<div class="chart-legend">${series.map((s, i) =>
+    `<span><i class="chart-dot" style="background:${s.color || colorSerie(i)}"></i>${esc(s.name)}</span>`).join("")}</div>`;
+}
+
+function graficoBarras(titulo, subtitulo, filas, series, opciones = {}) {
+  const max = Math.max(1, ...filas.flatMap((f) => series.map((s) => Number(f[s.key]) || 0)));
+  const cuerpo = filas.length ? filas.map((f) => {
+    const label = f.label ?? "";
+    const mini = series.map((s) => {
+      const valor = Number(f[s.key]) || 0;
+      const pct = (valor / max) * 100;
+      const nombre = series.length > 1 ? `<span class="serie">${esc(s.name)}</span>` : "";
+      const formatear = s.fmt || fmtInt;
+      return `<div class="chart-mini ${series.length > 1 ? "" : "solo"}">${nombre}
+        <div class="chart-track"><span class="chart-fill ${s.clase || ""}" style="width:${pct}%"></span></div>
+        <span class="chart-value" title="${esc(formatear(valor))}">${esc(formatear(valor))}</span></div>`;
+    }).join("");
+    const valorFinal = opciones.valor ? `<div class="chart-value">${esc(opciones.valor(f))}</div>` : "";
+    return `<div class="chart-row ${opciones.valor ? "with-value" : ""}">
+      <div class="chart-label" title="${esc(label)}">${esc(label)}</div>
+      <div class="chart-bars">${mini}</div>${valorFinal}</div>`;
+  }).join("") : `<div class="chart-empty">Sin datos para esta corrida.</div>`;
+  return `<section class="chart-card ${opciones.wide ? "wide" : ""}">
+    <div class="chart-head"><div><h4>${esc(titulo)}</h4><p>${esc(subtitulo || "")}</p></div></div>
+    ${chartLegend(series)}${cuerpo}</section>`;
+}
+
+function graficoApilado(titulo, subtitulo, categorias, series, opciones = {}) {
+  const pintadas = series.map((s, i) => ({ ...s, color: s.color || colorSerie(i) }));
+  const totales = categorias.map((_, idx) => pintadas.reduce((a, s) => a + (Number(s.valores[idx]) || 0), 0));
+  const max = Math.max(1, ...totales);
+  const cuerpo = categorias.length ? categorias.map((cat, idx) => {
+    const total = totales[idx];
+    const segmentos = pintadas.map((s) => {
+      const valor = Number(s.valores[idx]) || 0;
+      if (!valor) return "";
+      return `<span style="width:${(valor / max) * 100}%;background:${s.color}" title="${esc(s.name)}: ${fmtInt(valor)}"></span>`;
+    }).join("");
+    return `<div class="chart-row with-value">
+      <div class="chart-label" title="${esc(cat)}">${esc(cat)}</div>
+      <div><div class="chart-stack">${segmentos || `<span style="width:100%;background:#f1f1f1"></span>`}</div></div>
+      <div class="chart-value">${fmtInt(total)}</div></div>`;
+  }).join("") : `<div class="chart-empty">Sin datos para esta corrida.</div>`;
+  return `<section class="chart-card ${opciones.wide ? "wide" : ""}">
+    <div class="chart-head"><div><h4>${esc(titulo)}</h4><p>${esc(subtitulo || "")}</p></div></div>
+    ${chartLegend(pintadas)}${cuerpo}</section>`;
+}
+
+function graficoCupos(titulo, subtitulo, filas) {
+  const cuerpo = filas.length ? filas.map((f) => {
+    const cupo = Number(f.cupo) || 0;
+    const usado = Number(f.asignados) || 0;
+    const pct = cupo > 0 ? (usado / cupo) * 100 : 0;
+    return `<div class="chart-row with-value">
+      <div class="chart-label" title="${esc(f.canal)}">${esc(f.canal)}</div>
+      <div><div class="chart-track tall"><span class="chart-fill ${pct > 92 ? "hot" : ""}" style="width:${Math.min(100, pct)}%"></span></div>
+        <div class="chart-sub">${fmtInt(usado)} de ${fmtInt(cupo)} contactos</div></div>
+      <div class="chart-value">${cupo ? fmtPct(pct) : "—"}</div></div>`;
+  }).join("") : `<div class="chart-empty">Sin cupos configurados.</div>`;
+  return `<section class="chart-card">
+    <div class="chart-head"><div><h4>${esc(titulo)}</h4><p>${esc(subtitulo || "")}</p></div></div>${cuerpo}</section>`;
+}
+
+function renderGraficos(g) {
+  state.graficos = g;
+  state.graficoVariable = g.variable;
+  const canales = g.canales || [];
+  const porVariable = g.por_variable || [];
+  const selector = $("#graficoVariable");
+  selector.innerHTML = (g.variables || []).map((v) =>
+    `<option value="${esc(v.nombre)}" ${v.nombre === g.variable ? "selected" : ""}>${esc(v.nombre)} · ${v.tipo === "numerica" ? "numérica (rangos)" : "categoría"}</option>`).join("");
+  $("#graficoInfo").textContent = `${fmtInt(g.total_asignados)} / ${fmtInt(g.total_clientes)} asignados`;
+  $("#graficoHint").textContent = `Dataset ${g.dataset} · variable ${g.variable} · ${fmtInt(porVariable.length)} categorías`;
+
+  const canalesVar = g.canales_por_variable || { categorias: [], series: [] };
+  const productosVar = g.productos_por_variable || { categorias: [], series: [] };
+  const html = [
+    graficoBarras(
+      "Asignados y productos por canal",
+      "contactos principales y productos ofrecidos en cada canal",
+      canales.map((c) => ({ label: c.canal, asignados: c.asignados, productos: c.productos })),
+      [
+        { key: "asignados", name: "Asignados", clase: "", color: "#ee2a26" },
+        { key: "productos", name: "Productos", clase: "blue", color: "#4f8cff" },
+      ]
+    ),
+    graficoCupos(
+      "Uso de cupos por canal",
+      "contactos asignados frente al cupo configurado para la corrida",
+      canales
+    ),
+    graficoBarras(
+      "Productos ofrecidos",
+      "ofertas y clientes únicos por producto",
+      (g.productos || []).map((p) => ({ label: p.producto, ofertas: p.ofertas, clientes: p.clientes })),
+      [
+        { key: "ofertas", name: "Ofertas", clase: "amber", color: "#f5a524" },
+        { key: "clientes", name: "Clientes", clase: "green", color: "#22c55e" },
+      ]
+    ),
+    graficoBarras(
+      `Clientes por ${g.variable}`,
+      "base total frente a clientes asignados en cada categoría",
+      porVariable.map((r) => ({ label: r.categoria, clientes: r.clientes, asignados: r.asignados })),
+      [
+        { key: "clientes", name: "Clientes", clase: "blue", color: "#4f8cff" },
+        { key: "asignados", name: "Asignados", clase: "", color: "#ee2a26" },
+      ],
+      { wide: true }
+    ),
+    graficoApilado(
+      `Asignados por ${g.variable} y canal`,
+      "composición de los contactos principales por categoría y canal",
+      canalesVar.categorias,
+      canalesVar.series,
+      { wide: true }
+    ),
+    graficoApilado(
+      `Productos por ${g.variable}`,
+      "composición de las ofertas por categoría y producto",
+      productosVar.categorias,
+      productosVar.series,
+      { wide: true }
+    ),
+  ].join("");
+
+  $("#graficosBox").innerHTML = `<div class="chart-summary">
+    <span>Variables disponibles: <b>${fmtInt((g.variables || []).length)}</b></span>
+    <span>Canales: <b>${fmtInt(canales.length)}</b></span>
+    <span>Productos: <b>${fmtInt((g.productos || []).length)}</b></span>
+    <span>Categorías de <b>${esc(g.variable)}</b>: <b>${fmtInt(porVariable.length)}</b></span>
+  </div><div class="charts-grid">${html}</div>`;
+}
+
+async function cargarGraficos(variable) {
+  const caja = $("#graficosBox");
+  const elegida = variable || state.graficoVariable || $("#graficoVariable").value || "";
+  caja.innerHTML = `<div class="empty">Calculando gráficos…</div>`;
+  try {
+    const q = elegida ? `?variable=${encodeURIComponent(elegida)}` : "";
+    const g = await api(`/api/graficos${q}`);
+    renderGraficos(g);
+  } catch (e) {
+    caja.innerHTML = `<div class="empty"><b>No se pudieron calcular los gráficos</b>${esc(e.message)}</div>`;
+  }
+}
+
+$("#graficoVariable").addEventListener("change", (e) => cargarGraficos(e.target.value));
+$("#btnGraficosRefresh").addEventListener("click", () => cargarGraficos($("#graficoVariable").value));
 
 /* ============================ historial ============================ */
 function renderHistorial(lista) {
