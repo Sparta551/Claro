@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CLARO NEXUS · Consola de configuración</title>
+<style>
+:root{
+  --bg:#0a0d13;
+  --bg-soft:#0f131b;
+  --panel:#141a24;
+  --panel-2:#18202c;
+  --border:#242e3d;
+  --border-strong:#324054;
+  --text:#e9eef6;
+  --muted:#8b98ab;
+  --muted-2:#637086;
+  --red:#e32b2b;
+  --red-soft:rgba(227,43,43,.14);
+  --red-glow:rgba(227,43,43,.35);
+  --green:#22c55e;
+  --green-soft:rgba(34,197,94,.12);
+  --amber:#f5a524;
+  --amber-soft:rgba(245,165,36,.12);
+  --blue:#4f8cff;
+  --blue-soft:rgba(79,140,255,.12);
+  --radius:14px;
+  --radius-sm:10px;
+  --shadow:0 18px 46px rgba(0,0,0,.38);
+  --mono:"Cascadia Code","Consolas","SFMono-Regular",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:
+    radial-gradient(900px 420px at 12% -8%, rgba(227,43,43,.16), transparent 60%),
+    radial-gradient(760px 380px at 96% 0%, rgba(79,140,255,.10), transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+  font-size:14px;
+  line-height:1.45;
+  min-height:100vh;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--blue)}
+.hidden{display:none !important}
+.mono{font-family:var(--mono)}
+
+/* ---------- topbar ---------- */
+.topbar{
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  padding:14px 26px;
+  background:transparent;
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:280px}
+.logo{
+  width:40px;height:40px;border-radius:12px;display:grid;place-items:center;
+  background:linear-gradient(145deg,#ff4949,#b81010);
+  box-shadow:0 8px 22px var(--red-glow);
+  font-weight:800;font-size:19px;letter-spacing:-.5px;
+}
+.brand h1{margin:0;font-size:17px;letter-spacing:.14em;font-weight:700}
+.brand p{margin:1px 0 0;color:var(--muted);font-size:11.5px;letter-spacing:.02em}
+.top-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex-wrap:wrap}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:6px 11px;border-radius:999px;border:1px solid var(--border);
+  background:var(--panel);color:var(--muted);font-size:12px;white-space:nowrap;
+}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(34,197,94,.13)}
+.chip.warn .dot{background:var(--amber);box-shadow:0 0 0 3px rgba(245,165,36,.13)}
+.chip.bad .dot{background:var(--red);box-shadow:0 0 0 3px rgba(227,43,43,.13)}
+.chip.dirty{border-color:rgba(245,165,36,.4);color:#ffd28a;background:var(--amber-soft)}
+#configPathChip{display:block;max-width:min(430px,42vw);overflow:hidden;text-overflow:ellipsis}
+@media (max-width:720px){#configPathChip{display:none}}
+
+/* ---------- buttons ---------- */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  border:1px solid var(--border-strong);background:var(--panel-2);
+  padding:9px 14px;border-radius:10px;font-weight:600;font-size:13px;
+  transition:transform .12s ease,border-color .12s ease,background .12s ease;
+  white-space:nowrap;
+}
+.btn:hover{border-color:#465a74;background:#1d2735;transform:translateY(-1px)}
+.btn:active{transform:translateY(0)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn.primary{
+  background:linear-gradient(145deg,#f03b3b,#c21717);
+  border-color:#f25656;box-shadow:0 8px 22px rgba(227,43,43,.25);color:#fff;
+}
+.btn.primary:hover{background:linear-gradient(145deg,#ff4a4a,#d21a1a)}
+.btn.ghost{background:transparent;border-color:var(--border)}
+.btn.ghost:hover{background:var(--panel)}
+.btn.small{padding:6px 10px;font-size:12px;border-radius:8px}
+.btn.danger{color:#ff9c9c;border-color:rgba(227,43,43,.4);background:var(--red-soft)}
+.btn.icon{padding:6px 9px;border-radius:8px;line-height:1}
+
+/* ---------- cabecera fija ---------- */
+.head{
+  position:sticky;top:0;z-index:30;
+  background:rgba(10,13,19,.9);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--border);
+}
+/* ---------- tabs ---------- */
+.tabs{
+  display:flex;gap:4px;padding:0 26px;
+  overflow-x:auto;
+}
+.tab{
+  border:0;background:transparent;color:var(--muted);
+  padding:13px 15px 12px;font-weight:600;font-size:13px;
+  border-bottom:2px solid transparent;white-space:nowrap;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:#fff;border-bottom-color:var(--red)}
+.tab .count{
+  display:inline-block;margin-left:7px;padding:1px 7px;border-radius:999px;
+  background:var(--panel-2);border:1px solid var(--border);font-size:10.5px;color:var(--muted);
+}
+.tab.active .count{background:var(--red-soft);border-color:rgba(227,43,43,.4);color:#ffb3b3}
+
+/* ---------- layout ---------- */
+main{padding:24px 26px 60px;max-width:1500px;margin:0 auto}
+.view{display:none;animation:fade .18s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.section-head{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:4px 0 18px}
+.section-head h2{margin:0;font-size:20px;letter-spacing:-.01em}
+.section-head p{margin:4px 0 0;color:var(--muted);font-size:13px;max-width:760px}
+.section-head .spacer{flex:1}
+.panel{
+  background:linear-gradient(180deg,var(--panel),var(--bg-soft));
+  border:1px solid var(--border);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:18px;
+}
+.panel + .panel{margin-top:16px}
+.panel-title{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 14px}
+.panel-title h3{margin:0;font-size:14.5px;font-weight:700;letter-spacing:.01em}
+.panel-title .hint{color:var(--muted);font-size:12px}
+.panel-title .spacer{flex:1}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:1050px){.grid-2{grid-template-columns:1fr}}
+
+/* ---------- run controls ---------- */
+.run-bar{display:grid;grid-template-columns:1.55fr .75fr auto;gap:16px;align-items:end}
+@media (max-width:1050px){.run-bar{grid-template-columns:1fr}}
+.field-label{display:block;color:var(--muted);font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;margin:0 0 7px}
+.datasets{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dataset{
+  text-align:left;border:1px solid var(--border);background:var(--panel-2);
+  border-radius:12px;padding:10px 12px;transition:border-color .12s,background .12s;
+}
+.dataset b{display:block;font-size:13px}
+.dataset span{display:block;color:var(--muted);font-size:11px;margin-top:2px}
+.dataset:hover{border-color:var(--border-strong)}
+.dataset.active{border-color:var(--red);background:var(--red-soft);box-shadow:inset 0 0 0 1px rgba(227,43,43,.25)}
+.dataset:disabled{opacity:.42;cursor:not-allowed}
+.input,select.input,textarea.input{
+  width:100%;background:#0d121a;border:1px solid var(--border-strong);border-radius:9px;
+  padding:9px 11px;outline:none;transition:border-color .12s,box-shadow .12s;
+}
+.input:focus,select.input:focus,textarea.input:focus{
+  border-color:#5b7ba6;box-shadow:0 0 0 3px rgba(79,140,255,.13);
+}
+.input::placeholder{color:var(--muted-2)}
+.run-meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:14px;color:var(--muted);font-size:12px}
+.run-meta b{color:var(--text);font-weight:600}
+.run-meta .mono{font-size:11.5px}
+
+/* ---------- metrics ---------- */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media (max-width:1100px){.metrics{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.metrics{grid-template-columns:1fr}}
+.metric{
+  position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--border);
+  border-radius:13px;padding:14px 15px 13px;
+}
+.metric:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--blue);opacity:.7}
+.metric.good:before{background:var(--green)}
+.metric.warn:before{background:var(--amber)}
+.metric.bad:before{background:var(--red)}
+.metric .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.metric .v{font-size:25px;font-weight:750;letter-spacing:-.02em;margin-top:5px;font-variant-numeric:tabular-nums}
+.metric .s{color:var(--muted-2);font-size:11px;margin-top:2px}
+.metric .v small{font-size:13px;font-weight:600;color:var(--muted)}
+
+/* ---------- tables ---------- */
+.table-wrap{overflow:auto;border:1px solid var(--border);border-radius:11px;max-height:430px}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{
+  position:sticky;top:0;z-index:2;text-align:left;background:#111823;
+  color:var(--muted);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;
+  padding:9px 11px;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+td{padding:8px 11px;border-bottom:1px solid rgba(36,46,61,.65);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:rgba(79,140,255,.045)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.trunc{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;letter-spacing:.02em;border:1px solid transparent}
+.tag.green{background:var(--green-soft);color:#7ee2a4;border-color:rgba(34,197,94,.28)}
+.tag.amber{background:var(--amber-soft);color:#ffd28a;border-color:rgba(245,165,36,.28)}
+.tag.red{background:var(--red-soft);color:#ff9c9c;border-color:rgba(227,43,43,.3)}
+.tag.blue{background:var(--blue-soft);color:#a8c6ff;border-color:rgba(79,140,255,.28)}
+.tag.gray{background:var(--panel-2);color:var(--muted);border-color:var(--border)}
+.bar{height:5px;background:#0c1118;border-radius:999px;overflow:hidden;min-width:70px}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,#4f8cff,#7aa8ff);border-radius:999px}
+.bar.hot span{background:linear-gradient(90deg,#f5a524,#ff6b3d)}
+.empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+.empty b{display:block;color:var(--text);margin-bottom:4px;font-size:14px}
+
+/* ---------- alerts ---------- */
+.alert{display:flex;gap:12px;align-items:flex-start;padding:13px 15px;border-radius:11px;border:1px solid var(--border);background:var(--panel);font-size:12.5px}
+.alert.success{border-color:rgba(34,197,94,.3);background:var(--green-soft);color:#b6f3cc}
+.alert.warn{border-color:rgba(245,165,36,.3);background:var(--amber-soft);color:#ffe0a8}
+.alert.error{border-color:rgba(227,43,43,.35);background:var(--red-soft);color:#ffc0c0}
+.alert .ico{font-size:16px;line-height:1.2}
+.alert ul{margin:6px 0 0;padding-left:18px}
+.avisos{display:flex;flex-direction:column;gap:7px}
+.aviso{display:flex;gap:8px;align-items:flex-start;color:#ffd28a;font-size:12px}
+.aviso:before{content:"▲";font-size:9px;line-height:1.7;color:var(--amber)}
+
+/* ---------- entity editors ---------- */
+.entity-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px}
+@media (max-width:560px){.entity-grid{grid-template-columns:1fr}}
+.entity{background:var(--panel);border:1px solid var(--border);border-radius:13px;overflow:hidden}
+.entity-head{display:flex;align-items:center;gap:9px;padding:11px 13px;background:rgba(255,255,255,.018);border-bottom:1px solid var(--border)}
+.entity-head .badge{
+  width:30px;height:30px;border-radius:9px;display:grid;place-items:center;flex:0 0 auto;
+  background:var(--red-soft);border:1px solid rgba(227,43,43,.3);color:#ff9c9c;
+  font-size:10px;font-weight:800;letter-spacing:.02em;
+}
+.entity-head .id-input{
+  flex:1;background:transparent;border:0;outline:none;font-weight:700;font-size:13.5px;
+  padding:4px 2px;border-bottom:1px dashed transparent;min-width:80px;
+}
+.entity-head .id-input:hover{border-bottom-color:var(--border-strong)}
+.entity-head .id-input:focus{border-bottom-color:var(--red)}
+.entity-fields{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:13px}
+.entity-fields .full{grid-column:1/-1}
+.entity-fields label{display:block;color:var(--muted);font-size:10.5px;font-weight:650;text-transform:uppercase;letter-spacing:.055em;margin-bottom:4px}
+.entity-fields .input,.entity-fields select{padding:7px 9px;border-radius:8px;font-size:12.5px}
+.entity-fields input[type=date]{color-scheme:dark}
+.entity-fields textarea{resize:vertical;min-height:38px}
+.entity-foot{display:flex;align-items:center;gap:10px;padding:0 13px 12px;color:var(--muted-2);font-size:11px}
+.entity-foot .spacer{flex:1}
+.switch{display:inline-flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;font-weight:600;cursor:pointer;user-select:none;white-space:nowrap}
+.switch input{appearance:none;width:34px;height:19px;border-radius:999px;background:#2a3546;border:1px solid #39485d;position:relative;transition:background .15s;cursor:pointer;margin:0}
+.switch input:after{content:"";position:absolute;top:2px;left:2px;width:13px;height:13px;border-radius:50%;background:#8fa0b6;transition:transform .15s,background .15s}
+.switch input:checked{background:rgba(34,197,94,.32);border-color:rgba(34,197,94,.55)}
+.switch input:checked:after{transform:translateX(15px);background:#7ee2a4}
+.entity.dim{opacity:.62}
+.entity.dim .entity-head{background:rgba(255,255,255,.01)}
+
+/* ---------- params ---------- */
+.param-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.param-toolbar .input{max-width:340px}
+.param-groups{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:14px}
+@media (max-width:560px){.param-groups{grid-template-columns:1fr}}
+.param-group .panel-title h3{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:#c3cede}
+.param-row{display:grid;grid-template-columns:1fr 150px;gap:12px;align-items:start;padding:9px 0;border-bottom:1px dashed rgba(36,46,61,.8)}
+.param-row:last-child{border-bottom:0;padding-bottom:0}
+.param-row .name{font-family:var(--mono);font-size:11.5px;color:#cdd8e8;word-break:break-word}
+.param-row .help{color:var(--muted-2);font-size:11px;margin-top:2px}
+.param-row .input{padding:6px 8px;font-size:12px;text-align:right;font-family:var(--mono)}
+.param-row input[type=number]{appearance:textfield}
+.param-row.changed .name{color:#ffd28a}
+.param-row.changed .input{border-color:rgba(245,165,36,.55);box-shadow:0 0 0 2px rgba(245,165,36,.1)}
+
+/* ---------- overlay / modal / toasts ---------- */
+.overlay{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:rgba(5,8,12,.74);backdrop-filter:blur(4px)}
+.loader-card{width:min(420px,90vw);background:var(--panel);border:1px solid var(--border-strong);border-radius:16px;padding:26px;text-align:center;box-shadow:var(--shadow)}
+.spinner{width:46px;height:46px;margin:0 auto 14px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:var(--red);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loader-card b{font-size:15px}
+.loader-card p{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+.modal{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(5,8,12,.72);backdrop-filter:blur(4px);padding:20px}
+.modal-card{width:min(520px,94vw);background:var(--panel);border:1px solid var(--border-strong);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.modal-card h3{margin:0 0 6px;font-size:17px}
+.modal-card p{margin:0 0 16px;color:var(--muted);font-size:12.5px}
+.modal-card .actions{display:flex;gap:9px;justify-content:flex-end;margin-top:18px}
+.modal-card .input{margin-top:4px}
+.toasts{position:fixed;right:20px;bottom:20px;z-index:100;display:flex;flex-direction:column;gap:9px;max-width:380px}
+.toast{
+  display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:11px;
+  background:#161e2a;border:1px solid var(--border-strong);box-shadow:var(--shadow);
+  font-size:12.5px;animation:slidein .2s ease;
+}
+.toast.success{border-color:rgba(34,197,94,.45)}
+.toast.error{border-color:rgba(227,43,43,.55)}
+.toast.warn{border-color:rgba(245,165,36,.5)}
+.toast b{display:block;font-size:12.5px}
+.toast span{color:var(--muted);font-size:11.5px;word-break:break-word}
+@keyframes slidein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ---------- misc ---------- */
+.result-section{margin-top:16px}
+.meta-strip{display:flex;flex-wrap:wrap;gap:8px 20px;padding:11px 14px;background:var(--panel);border:1px solid var(--border);border-radius:11px;color:var(--muted);font-size:12px;margin-bottom:14px}
+.meta-strip b{color:var(--text)}
+.meta-strip .sep{width:1px;background:var(--border);margin:0 2px}
+footer{padding:0 26px 30px;color:var(--muted-2);font-size:11.5px;text-align:center}
+footer b{color:var(--muted)}
+kbd{font-family:var(--mono);font-size:10.5px;padding:1px 5px;border:1px solid var(--border-strong);border-radius:5px;background:var(--panel-2);color:var(--muted)}
+.scroll-hint{color:var(--muted-2);font-size:11px;margin-top:7px}
+</style>
+</head>
+<body>
+
+<div class="head">
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">N</div>
+    <div>
+      <h1>CLARO NEXUS</h1>
+      <p>Orquestador Next Best Action · Consola de configuración</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <span id="enginePill" class="chip"><span class="dot"></span><span>Conectando…</span></span>
+    <span id="dirtyPill" class="chip dirty hidden"><span class="dot"></span><span>Cambios sin guardar</span></span>
+    <button class="btn ghost" id="btnReload" title="Recargar la configuración original">Restaurar</button>
+    <button class="btn ghost" id="btnSave" title="Guardar en config_guardada/">Guardar config</button>
+    <button class="btn primary" id="btnRunTop">▶ Ejecutar motor</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab active" data-tab="ejecucion" role="tab">Ejecución</button>
+  <button class="tab" data-tab="campanas" role="tab">Campañas <span class="count" id="countCampanas">0</span></button>
+  <button class="tab" data-tab="reglas" role="tab">Reglas <span class="count" id="countReglas">0</span></button>
+  <button class="tab" data-tab="parametros" role="tab">Parámetros <span class="count" id="countParams">0</span></button>
+  <button class="tab" data-tab="historial" role="tab">Historial <span class="count" id="countHist">0</span></button>
+</nav>
+</div>
+
+<main>
+  <!-- ================= EJECUCION ================= -->
+  <section class="view active" id="view-ejecucion">
+    <div class="section-head">
+      <div>
+        <h2>Ejecución del orquestador</h2>
+        <p>Configure el dataset y la fecha, revise los avisos y ejecute. El motor aplica elegibilidad, canales, paquetes, cupos y auditoría R01–R16 sobre la configuración vigente.</p>
+      </div>
+      <div class="spacer"></div>
+      <span class="chip" id="configPathChip" title="">config: —</span>
+    </div>
+
+    <div class="panel">
+      <div class="run-bar">
+        <div>
+          <span class="field-label">Dataset de clientes</span>
+          <div class="datasets" id="datasets"></div>
+        </div>
+        <div>
+          <label class="field-label" for="fecha">Fecha de evaluación</label>
+          <input class="input" type="date" id="fecha">
+          <div class="scroll-hint">Define vigencias y corte de contactos.</div>
+        </div>
+        <div>
+          <span class="field-label" style="visibility:hidden">Ejecutar</span>
+          <button class="btn primary" id="btnRun" style="width:100%;padding:11px 18px">▶ Ejecutar motor</button>
+          <div class="scroll-hint" style="text-align:center"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></div>
+        </div>
+      </div>
+      <div class="run-meta">
+        <span>Base de datos: <b id="metaDatos">—</b></span>
+        <span>Reglas activas: <b id="metaReglasActivas">—</b></span>
+        <span>Canales con cupo: <b id="metaCupos">—</b></span>
+        <span>Motor: <b id="metaMotor">—</b></span>
+        <span id="metaOrtools"></span>
+      </div>
+      <div class="avisos hidden" id="avisosBox" style="margin-top:14px"></div>
+    </div>
+
+    <div class="panel" id="welcomePanel">
+      <div class="empty">
+        <b>Aún no hay una corrida en esta sesión</b>
+        Elija un dataset y pulse <b style="display:inline">Ejecutar motor</b>. Al terminar verá métricas, uso de canales, ofertas, violaciones y una muestra de la parrilla.
+        <div style="margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+          <span class="tag gray">5 clientes · demo</span>
+          <span class="tag gray">5.000 · sintética</span>
+          <span class="tag gray">100.000 · base completa</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultados" class="hidden">
+      <div class="meta-strip" id="runMeta"></div>
+      <div class="metrics" id="metrics"></div>
+
+      <div class="panel result-section">
+        <div class="panel-title">
+          <h3>Uso de canales</h3>
+          <span class="hint">contactos asignados frente al cupo de la corrida</span>
+          <div class="spacer"></div>
+          <span class="tag blue" id="tagAsignados">—</span>
+        </div>
+        <div class="table-wrap" id="tablaCanales"></div>
+      </div>
+
+      <div class="grid-2 result-section">
+        <div class="panel">
+          <div class="panel-title"><h3>Campañas ofertadas</h3><span class="hint">valor esperado por campaña</span></div>
+          <div class="table-wrap" id="tablaCampanas"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-title"><h3>Productos</h3><span class="hint">clientes únicos y ofertas</span></div>
+          <div class="table-wrap" id="tablaProductos"></div>
+        </div>
+      </div>
+
+      <div class="panel result-section">
+        <div class="panel-title">
+          <h3>Auditoría R01–R16</h3>
+          <span class="hint">el validador es independiente del optimizador</span>
+          <div class="spacer"></div>
+          <span id="tagViolaciones" class="tag green">0 violaciones</span>
+        </div>
+        <div id="violacionesBox"></div>
+        <div class="table-wrap hidden" id="tablaViolaciones" style="margin-top:12px"></div>
+        <div class="table-wrap hidden" id="tablaRazones" style="margin-top:12px"></div>
+      </div>
+
+      <div class="panel result-section">
+        <div class="panel-title">
+          <h3>Muestra de la parrilla</h3>
+          <span class="hint" id="muestraHint"></span>
+          <div class="spacer"></div>
+          <button class="btn small ghost" id="btnDescargar">⬇ Descargar CSV completo</button>
+        </div>
+        <div class="table-wrap" id="tablaParrilla"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CAMPANAS ================= -->
+  <section class="view" id="view-campanas">
+    <div class="section-head">
+      <div>
+        <h2>Campañas</h2>
+        <p>Producto, valor de negocio, canales permitidos y vigencia. Todo cambio aquí se envía al motor en la próxima ejecución.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn primary" id="btnAddCampana">+ Nueva campaña</button>
+    </div>
+    <div class="entity-grid" id="campanasGrid"></div>
+  </section>
+
+  <!-- ================= REGLAS ================= -->
+  <section class="view" id="view-reglas">
+    <div class="section-head">
+      <div>
+        <h2>Reglas de negocio</h2>
+        <p>El intérprete evalúa cualquier columna del dataset. <b>Elegibilidad</b> excluye productos por cliente y <b>canal</b> restringe autorizaciones o contactos por canal.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn primary" id="btnAddRegla">+ Nueva regla</button>
+    </div>
+    <div class="entity-grid" id="reglasGrid"></div>
+  </section>
+
+  <!-- ================= PARAMETROS ================= -->
+  <section class="view" id="view-parametros">
+    <div class="section-head">
+      <div>
+        <h2>Parámetros</h2>
+        <p>Umbrales, capacidades por canal, topes de contacto, pesos y jerarquía. Los valores se validan al ejecutar.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="btnAddParam">+ Parámetro</button>
+    </div>
+    <div class="panel">
+      <div class="param-toolbar">
+        <input class="input" id="paramFiltro" placeholder="Filtrar parámetros… (ej. capacidad, umbral, jerarquía)">
+        <span class="chip" id="paramStats">0 parámetros</span>
+      </div>
+      <div class="param-groups" id="paramsGrid"></div>
+    </div>
+  </section>
+
+  <!-- ================= HISTORIAL ================= -->
+  <section class="view" id="view-historial">
+    <div class="section-head">
+      <div>
+        <h2>Historial de corridas</h2>
+        <p>Se conservan las últimas 20 ejecuciones de esta sesión del servidor. Descargue cada parrilla al momento de correr.</p>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn ghost" id="btnClearHist">Limpiar historial</button>
+    </div>
+    <div class="panel">
+      <div class="table-wrap" id="tablaHistorial" style="max-height:none"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  CLARO NEXUS · motor configurable · <b>OR-Tools opcional</b> con heurística de respaldo ·
+  la configuración editada se guarda en <b>config_guardada/</b>, nunca sobre los CSV originales.
+</footer>
+
+<!-- overlay -->
+<div class="overlay hidden" id="overlay">
+  <div class="loader-card">
+    <div class="spinner"></div>
+    <b id="overlayTitle">Ejecutando motor…</b>
+    <p id="overlayText">Evaluando elegibilidad, canales, paquetes y cupos.</p>
+  </div>
+</div>
+
+<!-- modal guardar -->
+<div class="modal hidden" id="modalGuardar">
+  <div class="modal-card">
+    <h3>Guardar configuración</h3>
+    <p>Se escribirán los tres CSV normalizados en <span class="mono">config_guardada/&lt;nombre&gt;/</span>. Los archivos originales no se modifican.</p>
+    <label class="field-label" for="saveNombre">Nombre de la carpeta</label>
+    <input class="input" id="saveNombre" placeholder="mi_configuracion">
+    <div class="actions">
+      <button class="btn ghost" id="btnSaveCancel">Cancelar</button>
+      <button class="btn primary" id="btnSaveConfirm">Guardar configuración</button>
+    </div>
+  </div>
+</div>
+
+<!-- modal nuevo parámetro -->
+<div class="modal hidden" id="modalParam">
+  <div class="modal-card">
+    <h3>Nuevo parámetro</h3>
+    <p>Use la convención <span class="mono">grupo.nombre</span>. Si el motor no lo reconoce quedará disponible para futuras reglas o extensiones.</p>
+    <label class="field-label" for="paramNombre">Nombre</label>
+    <input class="input mono" id="paramNombre" placeholder="canal.capacidad_por_corrida.asesor">
+    <label class="field-label" for="paramValor" style="margin-top:12px">Valor</label>
+    <input class="input mono" id="paramValor" placeholder="2500">
+    <div class="actions">
+      <button class="btn ghost" id="btnParamCancel">Cancelar</button>
+      <button class="btn primary" id="btnParamConfirm">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+"use strict";
+
+/* ============================ utilidades ============================ */
+const $ = (sel, raiz = document) => raiz.querySelector(sel);
+const $$ = (sel, raiz = document) => Array.from(raiz.querySelectorAll(sel));
+
+function esc(valor) {
+  return String(valor == null ? "" : valor)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+const fmtInt = (n) => Number(n ?? 0).toLocaleString("es-CO");
+function fmtDec(n, dec = 4) {
+  if (n === null || n === undefined || n === "") return "—";
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "—";
+  return v.toLocaleString("es-CO", { minimumFractionDigits: 0, maximumFractionDigits: dec });
+}
+function fmtPct(n) {
+  if (n === null || n === undefined) return "—";
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "—";
+  return `${v.toLocaleString("es-CO", { maximumFractionDigits: 2 })}%`;
+}
+
+const state = {
+  config: null,
+  health: null,
+  datasets: [],
+  dataset: "demo",
+  fecha: "",
+  configDir: "",
+  ortools: false,
+  originalParams: {},
+  lastRun: null,
+  dirty: false,
+  busy: false,
+};
+
+/* ============================ API ============================ */
+async function api(ruta, opciones = {}) {
+  const res = await fetch(ruta, {
+    headers: { "Content-Type": "application/json" },
+    cache: "no-store",
+    ...opciones,
+  });
+  const tipo = res.headers.get("content-type") || "";
+  const datos = tipo.includes("application/json") ? await res.json() : await res.text();
+  if (!res.ok || (datos && datos.ok === false)) {
+    const msg = (datos && (datos.error || datos.mensaje)) || `HTTP ${res.status}`;
+    const detalle = datos && datos.detalle ? `\n${datos.detalle}` : "";
+    throw new Error(msg + detalle);
+  }
+  return datos;
+}
+
+/* ============================ toasts / busy ============================ */
+function toast(tipo, titulo, texto = "", ms = 4600) {
+  const icono = tipo === "success" ? "✓" : tipo === "error" ? "✕" : tipo === "warn" ? "▲" : "i";
+  const el = document.createElement("div");
+  el.className = `toast ${tipo}`;
+  el.innerHTML = `<b>${icono} ${esc(titulo)}</b>${texto ? `<span>${esc(texto).replace(/\n/g, "<br>")}</span>` : ""}`;
+  $("#toasts").appendChild(el);
+  setTimeout(() => { el.style.opacity = "0"; el.style.transition = "opacity .25s"; }, ms);
+  setTimeout(() => el.remove(), ms + 300);
+}
+
+function setBusy(activo, titulo, texto) {
+  state.busy = activo;
+  $("#overlay").classList.toggle("hidden", !activo);
+  if (titulo) $("#overlayTitle").textContent = titulo;
+  if (texto) $("#overlayText").textContent = texto;
+  $("#btnRun").disabled = activo;
+  $("#btnRunTop").disabled = activo;
+}
+
+function setDirty(valor) {
+  state.dirty = !!valor;
+  $("#dirtyPill").classList.toggle("hidden", !valor);
+}
+
+/* ============================ pestañas ============================ */
+$$(".tab").forEach((tab) => {
+  tab.setAttribute("aria-selected", tab.classList.contains("active") ? "true" : "false");
+  tab.addEventListener("click", () => {
+    $$(".tab").forEach((t) => {
+      t.classList.remove("active");
+      t.setAttribute("aria-selected", "false");
+    });
+    $$(".view").forEach((v) => v.classList.remove("active"));
+    tab.classList.add("active");
+    tab.setAttribute("aria-selected", "true");
+    $(`#view-${tab.dataset.tab}`).classList.add("active");
+    if (tab.dataset.tab === "historial") cargarHistorial();
+  });
+});
+
+/* ============================ catálogos de campos ============================ */
+const OPERADORES = ["==", "!=", ">", ">=", "<", "<=", "en", "not_en", "contiene", "no_contiene"];
+
+const CAMPOS_CAMPANA = [
+  { key: "nombre", label: "Nombre", type: "text", full: true },
+  { key: "producto", label: "Producto", type: "text" },
+  { key: "objetivo", label: "Objetivo", type: "text" },
+  { key: "columna_score", label: "Columna de score", type: "text", full: true },
+  { key: "valor_negocio", label: "Valor de negocio", type: "number", step: "0.01", min: "0" },
+  { key: "canales_permitidos", label: "Canales permitidos", type: "text", hint: "separados por |" },
+  { key: "vigencia_inicio", label: "Vigencia inicio", type: "date" },
+  { key: "vigencia_fin", label: "Vigencia fin", type: "date" },
+];
+
+const CAMPOS_REGLA = [
+  { key: "nombre", label: "Nombre", type: "text", full: true },
+  { key: "tipo", label: "Tipo", type: "select", options: [["elegibilidad", "Elegibilidad"], ["canal", "Canal"]] },
+  { key: "alcance_nivel", label: "Alcance", type: "select", options: [["global", "Global"], ["campana", "Campaña"], ["canal", "Canal"]] },
+  { key: "alcance_valores", label: "Valores de alcance", type: "text", hint: "C01|C02 o canal|canal" },
+  { key: "atributo", label: "Atributo del dataset", type: "text" },
+  { key: "operador", label: "Operador", type: "select", options: OPERADORES.map((o) => [o, o]) },
+  { key: "valor", label: "Valor", type: "text" },
+  { key: "accion", label: "Acción", type: "select", options: [["excluir", "Excluir"]] },
+];
+
+const PARAM_HELP = {
+  "priorizacion.modo": "ponderado usa pesos; jerarquia_estricta prioriza el orden.",
+  "priorizacion.modos_disponibles": "Modos válidos separados por |.",
+  "priorizacion.jerarquia": "Orden de campañas, de mayor a menor prioridad.",
+  "priorizacion.pesos.score_producto": "Peso del score del modelo (los pesos deberían sumar 1).",
+  "priorizacion.pesos.valor_negocio": "Peso del valor de negocio de la campaña.",
+  "priorizacion.pesos.jerarquia": "Peso de la posición en la jerarquía.",
+  "priorizacion.umbral_score_producto": "Score mínimo del producto para considerar la oferta.",
+  "priorizacion.desempate": "Columnas de desempate separadas por |.",
+  "canal.criterio": "score_canal maximiza valor; orden_preferencia sigue el orden configurado.",
+  "canal.criterios_disponibles": "Criterios válidos separados por |.",
+  "canal.orden_preferencia": "Orden de canales para el criterio de preferencia.",
+  "canal.umbral_score_canal": "Score mínimo del canal para habilitarlo.",
+  "politica_contacto.canales_por_cliente": "Canales por cliente (el motor actual usa 1).",
+  "politica_contacto.max_contactos_semana": "Clientes con este número de contactos quedan fuera.",
+};
+
+function helpParam(nombre) {
+  if (PARAM_HELP[nombre]) return PARAM_HELP[nombre];
+  if (nombre.startsWith("canal.capacidad_por_corrida.")) return "Cupo de contactos del canal en esta corrida.";
+  if (nombre.startsWith("politica_contacto.max_productos_por_canal.")) return "Máximo de productos ofrecidos en un contacto de este canal.";
+  return "";
+}
+
+/* ============================ render: editores ============================ */
+function campoHTML(campo, valor, base) {
+  const raw = valor == null ? "" : String(valor);
+  const id = `${base}_${campo.key}`;
+  const hint = campo.hint ? ` <span style="text-transform:none;font-weight:400;color:var(--muted-2)">· ${esc(campo.hint)}</span>` : "";
+  if (campo.type === "select") {
+    const opciones = campo.options.map(([v, l]) =>
+      `<option value="${esc(v)}" ${raw === String(v) ? "selected" : ""}>${esc(l)}</option>`).join("");
+    return `<div class="${campo.full ? "full" : ""}"><label for="${id}">${esc(campo.label)}${hint}</label><select class="input" id="${id}" data-field="${campo.key}">${opciones}</select></div>`;
+  }
+  const attrs = [`data-field="${campo.key}"`, `value="${esc(raw)}"`, `type="${campo.type || "text"}"`, `id="${id}"`];
+  if (campo.step) attrs.push(`step="${campo.step}"`);
+  if (campo.min !== undefined) attrs.push(`min="${campo.min}"`);
+  if (campo.max !== undefined) attrs.push(`max="${campo.max}"`);
+  return `<div class="${campo.full ? "full" : ""}"><label for="${id}">${esc(campo.label)}${hint}</label><input class="input" ${attrs.join(" ")}></div>`;
+}
+
+function campanaCard(c, indice) {
+  const activa = String(c.activa) === "1";
+  const badge = esc((c.id || "N").slice(0, 3));
+  return `<article class="entity camp-card ${activa ? "" : "dim"}">
+    <div class="entity-head">
+      <span class="badge">${badge}</span>
+      <input class="id-input mono" data-field="id" value="${esc(c.id || "")}" placeholder="ID campaña" aria-label="ID de campaña">
+      <label class="switch"><input type="checkbox" data-field="activa" ${activa ? "checked" : ""}> Activa</label>
+      <button class="btn icon danger" data-action="del-campana" data-id="${esc(c.id || "")}" title="Eliminar campaña">✕</button>
+    </div>
+    <div class="entity-fields">
+      ${CAMPOS_CAMPANA.map((campo) => campoHTML(campo, c[campo.key], `camp_${indice}`)).join("")}
+    </div>
+    <div class="entity-foot">
+      <span class="mono">${esc(c.columna_score || "sin score")}</span>
+      <span class="spacer"></span>
+      <span>valor ${esc(c.valor_negocio || "0")}</span>
+    </div>
+  </article>`;
+}
+
+function reglaCard(r, indice) {
+  const activa = String(r.activa) === "1";
+  const badge = esc((r.id || "R").slice(0, 3));
+  const nivel = r.alcance_nivel === "global" ? "global" : `${r.alcance_nivel}: ${r.alcance_valores || "—"}`;
+  return `<article class="entity regla-card ${activa ? "" : "dim"}">
+    <div class="entity-head">
+      <span class="badge">${badge}</span>
+      <input class="id-input mono" data-field="id" value="${esc(r.id || "")}" placeholder="ID regla" aria-label="ID de regla">
+      <label class="switch"><input type="checkbox" data-field="activa" ${activa ? "checked" : ""}> Activa</label>
+      <button class="btn icon danger" data-action="del-regla" data-id="${esc(r.id || "")}" title="Eliminar regla">✕</button>
+    </div>
+    <div class="entity-fields">
+      ${CAMPOS_REGLA.map((campo) => campoHTML(campo, r[campo.key], `regla_${indice}`)).join("")}
+    </div>
+    <div class="entity-foot">
+      <span class="mono">${esc(r.tipo || "—")}</span>
+      <span class="spacer"></span>
+      <span>${esc(nivel)}</span>
+    </div>
+  </article>`;
+}
+
+function renderCampanas() {
+  const lista = (state.config && state.config.campanas) || [];
+  $("#campanasGrid").innerHTML = lista.map(campanaCard).join("");
+  $("#countCampanas").textContent = lista.length;
+}
+
+function renderReglas() {
+  const lista = (state.config && state.config.reglas) || [];
+  $("#reglasGrid").innerHTML = lista.map(reglaCard).join("");
+  $("#countReglas").textContent = lista.length;
+}
+
+function renderParams() {
+  const lista = (state.config && state.config.parametros) || [];
+  const grupos = new Map();
+  lista.forEach((p) => {
+    const nombre = String(p.parametro || "");
+    const corte = nombre.indexOf(".");
+    const grupo = corte > 0 ? nombre.slice(0, corte) : "general";
+    if (!grupos.has(grupo)) grupos.set(grupo, []);
+    grupos.get(grupo).push(p);
+  });
+  const orden = ["priorizacion", "canal", "politica_contacto", "general"];
+  const nombres = Array.from(grupos.keys()).sort((a, b) => {
+    const ia = orden.indexOf(a), ib = orden.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
+
+  $("#paramsGrid").innerHTML = nombres.map((grupo) => {
+    const filas = grupos.get(grupo)
+      .slice()
+      .sort((a, b) => String(a.parametro).localeCompare(String(b.parametro)))
+      .map((p) => {
+        const nombre = String(p.parametro);
+        const original = state.originalParams[nombre];
+        const cambiado = original !== undefined && String(original) !== String(p.valor);
+        const valor = p.valor == null ? "" : String(p.valor);
+        const numerico = /^-?\d+(\.\d+)?$/.test(valor);
+        const ayuda = helpParam(nombre);
+        return `<div class="param-row ${cambiado ? "changed" : ""}" data-grupo="${esc(grupo)}">
+          <div>
+            <div class="name">${esc(nombre)}</div>
+            ${ayuda ? `<div class="help">${esc(ayuda)}</div>` : ""}
+          </div>
+          <input class="input" data-param="${esc(nombre)}" value="${esc(valor)}"
+                 ${numerico ? 'type="number" step="any"' : 'type="text"'} aria-label="${esc(nombre)}">
+        </div>`;
+      }).join("");
+    return `<section class="panel param-group" data-grupo="${esc(grupo)}">
+      <div class="panel-title"><h3>${esc(grupo.replace(/_/g, " "))}</h3><span class="hint">${filas ? grupos.get(grupo).length + " parámetros" : ""}</span></div>
+      ${filas}
+    </section>`;
+  }).join("");
+
+  $("#countParams").textContent = lista.length;
+  $("#paramStats").textContent = `${lista.length} parámetros`;
+  filtrarParams();
+}
+
+/* ============================ render: datasets / meta ============================ */
+const DATASET_META = {
+  demo: { titulo: "Demo", detalle: "5 clientes", archivo: "casos_ejemplo_clientes.csv" },
+  synthetic: { titulo: "Sintética", detalle: "5.000 clientes", archivo: "CLARO_NEXUS_clientes_sinteticos_5000.csv" },
+  full: { titulo: "Completa", detalle: "100.000 clientes", archivo: "clientes 1.csv" },
+};
+
+function renderDatasets() {
+  const cont = $("#datasets");
+  cont.innerHTML = state.datasets.map((d) => {
+    const meta = DATASET_META[d.id] || { titulo: d.id, detalle: d.etiqueta };
+    return `<button class="dataset ${state.dataset === d.id ? "active" : ""}" data-dataset="${esc(d.id)}" ${d.existe ? "" : "disabled title='Archivo no encontrado'"}>
+      <b>${esc(meta.titulo)}</b><span>${esc(meta.detalle)}${d.existe ? "" : " · no disponible"}</span>
+    </button>`;
+  }).join("");
+}
+
+function renderMeta() {
+  const cfg = state.config || { reglas: [], parametros: [] };
+  const reglasActivas = (cfg.reglas || []).filter((r) => String(r.activa) === "1").length;
+  const cupos = (cfg.parametros || []).filter((p) => String(p.parametro).startsWith("canal.capacidad_por_corrida.")).length;
+  const meta = DATASET_META[state.dataset] || {};
+  $("#metaDatos").textContent = meta.detalle || state.dataset;
+  $("#metaReglasActivas").textContent = fmtInt(reglasActivas);
+  $("#metaCupos").textContent = fmtInt(cupos);
+  $("#metaMotor").textContent = state.ortools ? "OR-Tools" : "Heurística";
+  $("#metaOrtools").textContent = state.ortools
+    ? "OR-Tools disponible: asignación óptima por flujo de costo mínimo."
+    : "OR-Tools no instalado: se usará la heurística de respaldo.";
+  $("#configPathChip").textContent = `config: ${state.configDir || "—"}`;
+  $("#configPathChip").title = state.configDir || "";
+}
+
+function renderAvisos(avisos) {
+  const caja = $("#avisosBox");
+  const lista = Array.isArray(avisos) ? avisos.filter(Boolean) : [];
+  if (!lista.length) {
+    caja.classList.add("hidden");
+    caja.innerHTML = "";
+    return;
+  }
+  caja.classList.remove("hidden");
+  caja.innerHTML = `<div class="alert warn"><span class="ico">▲</span><div><b>${lista.length} aviso(s) de configuración</b><ul>${lista.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></div></div>`;
+}
+
+function setEngine(ok) {
+  const pill = $("#enginePill");
+  pill.className = "chip" + (ok === false ? " warn" : "");
+  pill.querySelector("span:last-child").textContent = ok ? "OR-Tools disponible" : "Heurística (sin OR-Tools)";
+  state.ortools = !!ok;
+}
+
+function renderAll() {
+  renderCampanas();
+  renderReglas();
+  renderParams();
+  renderDatasets();
+  renderMeta();
+}
+
+/* ============================ collect / validar ============================ */
+function collectCampanas() {
+  return $$("#campanasGrid .camp-card").map((card) => {
+    const obj = {};
+    $$("[data-field]", card).forEach((el) => {
+      obj[el.dataset.field] = el.type === "checkbox" ? (el.checked ? "1" : "0") : el.value.trim();
+    });
+    return obj;
+  });
+}
+
+function collectReglas() {
+  return $$("#reglasGrid .regla-card").map((card) => {
+    const obj = {};
+    $$("[data-field]", card).forEach((el) => {
+      obj[el.dataset.field] = el.type === "checkbox" ? (el.checked ? "1" : "0") : el.value.trim();
+    });
+    return obj;
+  });
+}
+
+function collectParams() {
+  return $$("#paramsGrid [data-param]").map((el) => ({
+    parametro: el.dataset.param,
+    valor: el.value.trim(),
+  }));
+}
+
+function syncConfigFromDom() {
+  if (!state.config) return;
+  state.config.campanas = collectCampanas();
+  state.config.reglas = collectReglas();
+  state.config.parametros = collectParams();
+}
+
+function validarEditor() {
+  syncConfigFromDom();
+  const { campanas, reglas, parametros } = state.config;
+
+  if (!campanas.length) throw new Error("Debe existir al menos una campaña.");
+  const idsCamp = new Set();
+  for (const c of campanas) {
+    if (!c.id) throw new Error("Hay una campaña sin id.");
+    if (idsCamp.has(c.id)) throw new Error(`Campaña duplicada: ${c.id}`);
+    idsCamp.add(c.id);
+    for (const k of ["producto", "columna_score", "canales_permitidos", "vigencia_inicio", "vigencia_fin"]) {
+      if (!c[k]) throw new Error(`Campaña ${c.id}: falta el campo ${k}.`);
+    }
+    if (!Number.isFinite(Number(String(c.valor_negocio).replace(",", ".")))) {
+      throw new Error(`Campaña ${c.id}: valor_negocio no es numérico.`);
+    }
+  }
+
+  if (!reglas.length) throw new Error("Debe existir al menos una regla.");
+  const idsReg = new Set();
+  for (const r of reglas) {
+    if (!r.id) throw new Error("Hay una regla sin id.");
+    if (idsReg.has(r.id)) throw new Error(`Regla duplicada: ${r.id}`);
+    idsReg.add(r.id);
+    if (!r.atributo) throw new Error(`Regla ${r.id}: falta el atributo.`);
+    if (!OPERADORES.includes(r.operador)) throw new Error(`Regla ${r.id}: operador inválido (${r.operador}).`);
+    if (r.valor === "") throw new Error(`Regla ${r.id}: falta el valor de comparación.`);
+    if (r.alcance_nivel !== "global" && !r.alcance_valores) {
+      throw new Error(`Regla ${r.id}: alcance ${r.alcance_nivel} requiere valores.`);
+    }
+  }
+
+  const nombresPar = new Set();
+  for (const p of parametros) {
+    if (!p.parametro) throw new Error("Hay un parámetro sin nombre.");
+    if (nombresPar.has(p.parametro)) throw new Error(`Parámetro duplicado: ${p.parametro}`);
+    nombresPar.add(p.parametro);
+    if (p.valor === "") throw new Error(`Parámetro ${p.parametro}: valor vacío.`);
+  }
+
+  if (!$("#fecha").value) throw new Error("Seleccione una fecha de evaluación.");
+  return { campanas, reglas, parametros, fecha: $("#fecha").value };
+}
+
+function filtrarParams() {
+  const filtro = ($("#paramFiltro").value || "").trim().toLowerCase();
+  let visibles = 0;
+  $$("#paramsGrid .param-group").forEach((grupo) => {
+    let enGrupo = 0;
+    $$(".param-row", grupo).forEach((fila) => {
+      const nombre = fila.querySelector(".name").textContent.toLowerCase();
+      const coincide = !filtro || nombre.includes(filtro);
+      fila.classList.toggle("hidden", !coincide);
+      if (coincide) enGrupo++;
+    });
+    grupo.classList.toggle("hidden", enGrupo === 0);
+    visibles += enGrupo;
+  });
+  $("#paramStats").textContent = filtro ? `${visibles} de ${state.config.parametros.length}` : `${state.config.parametros.length} parámetros`;
+}
+
+/* ============================ resultados ============================ */
+function renderTabla(columnas, filas, vacio = "Sin datos") {
+  if (!filas || !filas.length) return `<div class="empty">${esc(vacio)}</div>`;
+  return `<table><thead><tr>${columnas.map((c) =>
+    `<th class="${c.num ? "num" : ""}">${esc(c.label)}</th>`).join("")}</tr></thead>
+    <tbody>${filas.map((f) => `<tr>${columnas.map((c) => {
+      const contenido = c.render ? c.render(f) : esc(f[c.key] ?? "—");
+      const titulo = c.trunc ? ` title="${esc(f[c.key] ?? "")}"` : "";
+      return `<td class="${c.num ? "num" : ""} ${c.trunc ? "trunc" : ""}"${titulo}>${contenido}</td>`;
+    }).join("")}</tr>`).join("")}</tbody></table>`;
+}
+
+function metricaHTML(label, valor, sub, clase) {
+  return `<div class="metric ${clase || ""}">
+    <div class="k">${esc(label)}</div>
+    <div class="v">${valor}</div>
+    ${sub ? `<div class="s">${esc(sub)}</div>` : ""}
+  </div>`;
+}
+
+function renderResultados(run) {
+  if (!run || !run.metricas) return;
+  state.lastRun = run;
+  $("#welcomePanel").classList.add("hidden");
+  $("#resultados").classList.remove("hidden");
+
+  const m = run.metricas;
+  const motor = run.motor || m.motor || "—";
+  $("#runMeta").innerHTML = [
+    `Corrida <b>${esc(run.hora || "—")}</b>`,
+    `Dataset <b>${esc((DATASET_META[run.dataset] || {}).titulo || run.dataset)}</b>`,
+    `Fecha <b>${esc(run.fecha)}</b>`,
+    `Motor <b>${esc(motor)}</b>`,
+    `Parrilla <b>${fmtInt(run.total_filas)} filas</b>`,
+    run.datos ? `Datos <b>${fmtInt(run.datos.filas)} × ${fmtInt(run.datos.columnas)}</b>` : "",
+  ].filter(Boolean).map((t) => `<span>${t}</span>`).join('<span class="sep"></span>');
+
+  const jerarquia = m.jerarquia_pct_asignados;
+  $("#metrics").innerHTML = [
+    metricaHTML("Clientes", fmtInt(m.clientes), "en la base evaluada"),
+    metricaHTML("Asignados", fmtInt(m.clientes_asignados), `${fmtPct(m.cobertura_pct)} de cobertura`, "good"),
+    metricaHTML("Productos", fmtInt(m.productos_asignados), "ofertas en la parrilla"),
+    metricaHTML("Valor esperado", fmtDec(m.valor_esperado), "Σ score producto × canal × valor", "good"),
+    metricaHTML("Jerarquía", fmtPct(jerarquia), `elegibles ${fmtPct(m.jerarquia_pct_elegibles)}`, jerarquia === null ? "" : "warn"),
+    metricaHTML("Violaciones", fmtInt(m.violaciones), "R01–R16 auditadas", Number(m.violaciones) === 0 ? "good" : "bad"),
+    metricaHTML("Tiempo", `${fmtDec(m.tiempo_s, 2)} <small>s</small>`, "cómputo del motor"),
+    metricaHTML("Cupos", fmtInt((run.canales || []).length), "canales utilizados", "warn"),
+  ].join("");
+
+  $("#tagAsignados").textContent = `${fmtInt(m.clientes_asignados)} / ${fmtInt(m.clientes)} asignados`;
+
+  $("#tablaCanales").innerHTML = renderTabla([
+    { key: "canal", label: "Canal", render: (f) => `<span class="tag blue">${esc(f.canal)}</span>` },
+    { key: "clientes", label: "Clientes", num: true, render: (f) => fmtInt(f.clientes) },
+    { key: "cupo", label: "Cupo", num: true, render: (f) => f.cupo == null ? "—" : fmtInt(f.cupo) },
+    {
+      key: "uso_pct", label: "Uso del cupo", render: (f) => {
+        const uso = Number(f.uso_pct);
+        const ancho = Number.isFinite(uso) ? Math.min(100, uso) : 0;
+        return `<div style="display:flex;align-items:center;gap:8px;min-width:130px">
+          <div class="bar ${uso > 92 ? "hot" : ""}"><span style="width:${ancho}%"></span></div>
+          <span class="mono" style="font-size:11px">${fmtPct(f.uso_pct)}</span></div>`;
+      }
+    },
+    { key: "productos", label: "Productos", num: true, render: (f) => fmtInt(f.productos) },
+    { key: "valor", label: "Valor", num: true, render: (f) => fmtDec(f.valor) },
+  ], run.canales, "No se asignaron canales en esta corrida.");
+
+  $("#tablaCampanas").innerHTML = renderTabla([
+    { key: "campana", label: "Campaña", render: (f) => `<span class="mono">${esc(f.campana)}</span>` },
+    { key: "clientes", label: "Clientes", num: true, render: (f) => fmtInt(f.clientes) },
+    { key: "productos", label: "Ofertas", num: true, render: (f) => fmtInt(f.productos) },
+    { key: "valor", label: "Valor", num: true, render: (f) => fmtDec(f.valor) },
+  ], run.campanas, "Ninguna campaña fue ofertada.");
+
+  $("#tablaProductos").innerHTML = renderTabla([
+    { key: "producto", label: "Producto", render: (f) => `<span class="tag gray">${esc(f.producto)}</span>` },
+    { key: "clientes", label: "Clientes", num: true, render: (f) => fmtInt(f.clientes) },
+    { key: "ofertas", label: "Ofertas", num: true, render: (f) => fmtInt(f.ofertas) },
+    { key: "valor", label: "Valor", num: true, render: (f) => fmtDec(f.valor) },
+  ], run.productos, "Sin productos asignados.");
+
+  const violaciones = Number(m.violaciones || 0);
+  const tag = $("#tagViolaciones");
+  tag.className = `tag ${violaciones === 0 ? "green" : "red"}`;
+  tag.textContent = `${fmtInt(violaciones)} violaci${violaciones === 1 ? "ón" : "ones"}`;
+  if (violaciones === 0) {
+    $("#violacionesBox").innerHTML = `<div class="alert success"><span class="ico">✓</span><div><b>Auditoría limpia</b> La parrilla cumple las 16 restricciones R01–R16. El validador revisó la parrilla contra los datos originales y la configuración vigente.</div></div>`;
+    $("#tablaViolaciones").classList.add("hidden");
+  } else {
+    $("#violacionesBox").innerHTML = `<div class="alert error"><span class="ico">✕</span><div><b>Se detectaron ${fmtInt(violaciones)} incumplimientos</b> Revise el detalle y ajuste reglas, umbrales o cupos antes de exportar.</div></div>`;
+    $("#tablaViolaciones").classList.remove("hidden");
+    $("#tablaViolaciones").innerHTML = renderTabla([
+      { key: "restriccion", label: "Restricción", render: (f) => `<span class="tag red">${esc(f.restriccion)}</span>` },
+      { key: "id_cliente", label: "Cliente", render: (f) => `<span class="mono">${esc(f.id_cliente)}</span>` },
+      { key: "detalle", label: "Detalle", trunc: true },
+    ], run.violaciones, "Sin detalle de violaciones.");
+  }
+
+  const razones = run.razones || [];
+  const cajaRazones = $("#tablaRazones");
+  if (razones.length) {
+    cajaRazones.classList.remove("hidden");
+    cajaRazones.innerHTML = `<div style="padding:11px 12px 0;color:var(--muted);font-size:11.5px;font-weight:650;text-transform:uppercase;letter-spacing:.06em">Motivos de no asignación</div>` +
+      renderTabla([
+        { key: "razon", label: "Motivo", trunc: true },
+        { key: "clientes", label: "Clientes", num: true, render: (f) => fmtInt(f.clientes) },
+      ], razones);
+  } else {
+    cajaRazones.classList.add("hidden");
+    cajaRazones.innerHTML = "";
+  }
+
+  $("#muestraHint").textContent = `mostrando ${fmtInt((run.muestra || []).length)} de ${fmtInt(run.total_filas)} filas`;
+  $("#tablaParrilla").innerHTML = renderTabla([
+    { key: "id_cliente", label: "ID cliente", render: (f) => `<span class="mono">${esc(f.id_cliente)}</span>` },
+    {
+      key: "estado", label: "Estado", render: (f) => f.estado === "asignado"
+        ? `<span class="tag green">asignado</span>` : `<span class="tag gray">sin acción</span>`
+    },
+    { key: "canal", label: "Canal", render: (f) => f.canal ? `<span class="tag blue">${esc(f.canal)}</span>` : "—" },
+    { key: "campana_1", label: "Campaña 1", render: (f) => f.campana_1 ? `<span class="mono">${esc(f.campana_1)}</span>` : "—" },
+    { key: "campana_2", label: "Campaña 2", render: (f) => f.campana_2 ? `<span class="mono">${esc(f.campana_2)}</span>` : "—" },
+    { key: "razon", label: "Razón", trunc: true },
+  ], run.muestra, "La parrilla está vacía.");
+
+  renderAvisos(run.avisos || []);
+  $("#btnDescargar").disabled = false;
+}
+
+/* ============================ historial ============================ */
+function renderHistorial(lista) {
+  $("#countHist").textContent = lista.length;
+  $("#tablaHistorial").innerHTML = renderTabla([
+    { key: "hora", label: "Hora", render: (f) => `<span class="mono">${esc(f.hora)}</span>` },
+    { key: "dataset", label: "Dataset", render: (f) => `<span class="tag gray">${esc(f.dataset)}</span>` },
+    { key: "fecha", label: "Fecha", render: (f) => `<span class="mono">${esc(f.fecha)}</span>` },
+    { key: "clientes", label: "Clientes", num: true, render: (f) => fmtInt(f.metricas.clientes) },
+    { key: "asignados", label: "Asignados", num: true, render: (f) => fmtInt(f.metricas.clientes_asignados) },
+    { key: "cobertura", label: "Cobertura", num: true, render: (f) => fmtPct(f.metricas.cobertura_pct) },
+    { key: "valor", label: "Valor", num: true, render: (f) => fmtDec(f.metricas.valor_esperado) },
+    {
+      key: "violaciones", label: "Violaciones", num: true, render: (f) => Number(f.metricas.violaciones) === 0
+        ? `<span class="tag green">0</span>` : `<span class="tag red">${fmtInt(f.metricas.violaciones)}</span>`
+    },
+    { key: "tiempo", label: "Tiempo", num: true, render: (f) => `${fmtDec(f.metricas.tiempo_s, 2)} s` },
+    { key: "motor", label: "Motor", render: (f) => `<span class="tag ${f.motor === "ortools" ? "green" : "amber"}">${esc(f.motor)}</span>` },
+  ], lista, "Todavía no hay corridas registradas.");
+}
+
+async function cargarHistorial() {
+  try {
+    const res = await api("/api/history");
+    renderHistorial(res.historial || []);
+  } catch (e) {
+    renderHistorial([]);
+  }
+}
+
+/* ============================ configuración: cargar / aplicar ============================ */
+function aplicarConfig(c) {
+  state.config = {
+    campanas: c.campanas || [],
+    reglas: c.reglas || [],
+    parametros: c.parametros || [],
+  };
+  if (c.datasets) state.datasets = c.datasets;
+  if (c.dataset) state.dataset = c.dataset;
+  state.fecha = c.fecha || state.fecha;
+  state.configDir = c.config_dir || state.configDir;
+  $("#fecha").value = state.fecha;
+  state.originalParams = Object.fromEntries(
+    state.config.parametros.map((p) => [p.parametro, String(p.valor)])
+  );
+  renderAll();
+  renderAvisos(c.avisos || []);
+  setDirty(false);
+}
+
+async function recargarDesdeServidor() {
+  if (state.dirty && !confirm("Se perderán los cambios no guardados. ¿Restaurar la configuración original desde los CSV?")) return;
+  try {
+    await api("/api/reset", { method: "POST", body: "{}" });
+    const c = await api("/api/config");
+    aplicarConfig(c);
+    toast("success", "Configuración restaurada", c.config_dir || "");
+  } catch (e) {
+    toast("error", "No se pudo recargar", e.message);
+  }
+}
+
+/* ============================ guardar ============================ */
+function abrirModalGuardar() {
+  if (!state.config) return;
+  const ahora = new Date();
+  const sello = `${ahora.getFullYear()}${String(ahora.getMonth() + 1).padStart(2, "0")}${String(ahora.getDate()).padStart(2, "0")}_${String(ahora.getHours()).padStart(2, "0")}${String(ahora.getMinutes()).padStart(2, "0")}`;
+  $("#saveNombre").value = `config_${sello}`;
+  $("#modalGuardar").classList.remove("hidden");
+  setTimeout(() => $("#saveNombre").focus(), 30);
+}
+
+async function guardarConfig() {
+  let cfg;
+  try {
+    cfg = validarEditor();
+  } catch (e) {
+    toast("error", "Revisa la configuración", e.message);
+    return;
+  }
+  const nombre = ($("#saveNombre").value || "").trim();
+  if (!nombre) {
+    toast("warn", "Nombre requerido", "Indique el nombre de la carpeta.");
+    return;
+  }
+  const boton = $("#btnSaveConfirm");
+  boton.disabled = true;
+  boton.textContent = "Guardando…";
+  try {
+    const res = await api("/api/save", {
+      method: "POST",
+      body: JSON.stringify({ nombre, campanas: cfg.campanas, reglas: cfg.reglas, parametros: cfg.parametros }),
+    });
+    $("#modalGuardar").classList.add("hidden");
+    state.originalParams = Object.fromEntries(cfg.parametros.map((p) => [p.parametro, String(p.valor)]));
+    setDirty(false);
+    toast("success", "Configuración guardada", res.ruta || res.mensaje || "");
+    if (res.avisos) renderAvisos(res.avisos);
+  } catch (e) {
+    toast("error", "No se pudo guardar", e.message);
+  } finally {
+    boton.disabled = false;
+    boton.textContent = "Guardar configuración";
+  }
+}
+
+/* ============================ ejecutar ============================ */
+async function ejecutar() {
+  if (!state.config) {
+    toast("error", "Sin configuración", "La consola no está conectada al servidor.");
+    return;
+  }
+  let cfg;
+  try {
+    cfg = validarEditor();
+  } catch (e) {
+    toast("error", "Revisa la configuración", e.message);
+    return;
+  }
+  const ds = state.datasets.find((d) => d.id === state.dataset);
+  if (ds && !ds.existe) {
+    toast("error", "Dataset no disponible", `No se encontró ${ds.archivo}.`);
+    return;
+  }
+
+  setBusy(true, "Ejecutando motor…", state.dataset === "full"
+    ? "100.000 clientes: la heurística tarda unos segundos; OR-Tools puede tardar más."
+    : "Evaluando elegibilidad, canales, paquetes y cupos.");
+  const inicio = performance.now();
+  try {
+    const run = await api("/api/run", {
+      method: "POST",
+      body: JSON.stringify({
+        dataset: state.dataset,
+        fecha: cfg.fecha,
+        campanas: cfg.campanas,
+        reglas: cfg.reglas,
+        parametros: cfg.parametros,
+      }),
+    });
+    renderResultados(run);
+    await cargarHistorial();
+    setDirty(false);
+    const segundos = ((performance.now() - inicio) / 1000).toFixed(2);
+    toast("success", "Corrida completada",
+      `${fmtInt(run.metricas.clientes_asignados)} asignados · ${fmtInt(run.metricas.violaciones)} violaciones · ${segundos}s`);
+  } catch (e) {
+    toast("error", "Error de ejecución", e.message);
+  } finally {
+    setBusy(false);
+  }
+}
+
+/* ============================ agregar / eliminar ============================ */
+function requireConfig() {
+  if (state.config) return true;
+  toast("error", "Sin conexión", "Inicie el servidor con: python claro_nexus.py serve --open");
+  return false;
+}
+
+function agregarCampana() {
+  if (!requireConfig()) return;
+  syncConfigFromDom();
+  const n = state.config.campanas.length + 1;
+  state.config.campanas.push({
+    id: `C-NUEVA-${n}`,
+    nombre: "Nueva campaña",
+    producto: "NUEVO",
+    objetivo: "",
+    columna_score: "score_venta_cruzada_hogar",
+    valor_negocio: "1.0",
+    canales_permitidos: "asesor|whatsapp|correo|sms",
+    vigencia_inicio: $("#fecha").value || "2026-01-01",
+    vigencia_fin: "2026-12-31",
+    activa: "0",
+  });
+  renderCampanas();
+  setDirty(true);
+  const cards = $$("#campanasGrid .camp-card");
+  cards[cards.length - 1]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  toast("warn", "Campaña agregada", "Complete los campos y actívela cuando esté lista.");
+}
+
+function agregarRegla() {
+  if (!requireConfig()) return;
+  syncConfigFromDom();
+  const n = state.config.reglas.length + 1;
+  state.config.reglas.push({
+    id: `R-NUEVA-${n}`,
+    nombre: "Nueva regla",
+    tipo: "elegibilidad",
+    alcance_nivel: "global",
+    alcance_valores: "",
+    atributo: "",
+    operador: "==",
+    valor: "",
+    accion: "excluir",
+    activa: "0",
+  });
+  renderReglas();
+  setDirty(true);
+  const cards = $$("#reglasGrid .regla-card");
+  cards[cards.length - 1]?.scrollIntoView({ behavior: "smooth", block: "center" });
+  toast("warn", "Regla agregada", "Defina atributo, operador y valor; luego actívela.");
+}
+
+function eliminarCampana(boton) {
+  const card = boton.closest(".camp-card");
+  const id = card.querySelector('[data-field="id"]').value || "(sin id)";
+  if (!confirm(`¿Eliminar la campaña ${id}?`)) return;
+  card.remove();
+  state.config.campanas = collectCampanas();
+  $("#countCampanas").textContent = state.config.campanas.length;
+  setDirty(true);
+}
+
+function eliminarRegla(boton) {
+  const card = boton.closest(".regla-card");
+  const id = card.querySelector('[data-field="id"]').value || "(sin id)";
+  if (!confirm(`¿Eliminar la regla ${id}?`)) return;
+  card.remove();
+  state.config.reglas = collectReglas();
+  $("#countReglas").textContent = state.config.reglas.length;
+  setDirty(true);
+}
+
+/* ============================ eventos ============================ */
+$("#btnRun").addEventListener("click", ejecutar);
+$("#btnRunTop").addEventListener("click", ejecutar);
+$("#btnSave").addEventListener("click", abrirModalGuardar);
+$("#btnReload").addEventListener("click", recargarDesdeServidor);
+$("#btnAddCampana").addEventListener("click", agregarCampana);
+$("#btnAddRegla").addEventListener("click", agregarRegla);
+$("#btnDescargar").addEventListener("click", () => {
+  if (!state.lastRun) return toast("warn", "Sin parrilla", "Ejecute el motor primero.");
+  window.location.assign("/api/parrilla.csv");
+});
+
+$("#btnSaveCancel").addEventListener("click", () => $("#modalGuardar").classList.add("hidden"));
+$("#btnSaveConfirm").addEventListener("click", guardarConfig);
+$("#saveNombre").addEventListener("keydown", (e) => { if (e.key === "Enter") guardarConfig(); });
+
+$("#btnClearHist").addEventListener("click", async () => {
+  if (!confirm("¿Vaciar el historial de corridas de esta sesión?")) return;
+  try {
+    await api("/api/history/clear", { method: "POST", body: "{}" });
+    renderHistorial([]);
+    toast("success", "Historial limpio");
+  } catch (e) {
+    toast("error", "No se pudo limpiar", e.message);
+  }
+});
+
+$("#btnAddParam").addEventListener("click", () => {
+  $("#paramNombre").value = "";
+  $("#paramValor").value = "";
+  $("#modalParam").classList.remove("hidden");
+  setTimeout(() => $("#paramNombre").focus(), 30);
+});
+$("#btnParamCancel").addEventListener("click", () => $("#modalParam").classList.add("hidden"));
+$("#btnParamConfirm").addEventListener("click", () => {
+  if (!requireConfig()) return;
+  const nombre = $("#paramNombre").value.trim();
+  const valor = $("#paramValor").value.trim();
+  if (!nombre) return toast("warn", "Nombre requerido");
+  if (!valor) return toast("warn", "Valor requerido");
+  syncConfigFromDom();
+  if (state.config.parametros.some((p) => p.parametro === nombre)) {
+    return toast("error", "Parámetro duplicado", nombre);
+  }
+  state.config.parametros.push({ parametro: nombre, valor });
+  $("#modalParam").classList.add("hidden");
+  renderParams();
+  setDirty(true);
+  toast("success", "Parámetro agregado", nombre);
+});
+
+$("#paramFiltro").addEventListener("input", filtrarParams);
+
+$("#datasets").addEventListener("click", (e) => {
+  const boton = e.target.closest("[data-dataset]");
+  if (!boton || boton.disabled) return;
+  state.dataset = boton.dataset.dataset;
+  renderDatasets();
+  renderMeta();
+});
+
+document.addEventListener("input", (e) => {
+  if (e.target.closest("#paramsGrid")) {
+    const fila = e.target.closest(".param-row");
+    if (fila) {
+      const nombre = e.target.dataset.param;
+      const original = state.originalParams[nombre];
+      fila.classList.toggle("changed", original !== undefined && String(original) !== String(e.target.value));
+    }
+  }
+  if (e.target.closest("#campanasGrid, #reglasGrid, #paramsGrid")) setDirty(true);
+});
+
+document.addEventListener("change", (e) => {
+  if (e.target.matches('[data-field="activa"]')) {
+    const card = e.target.closest(".entity");
+    if (card) card.classList.toggle("dim", !e.target.checked);
+    setDirty(true);
+  }
+  if (e.target.closest("#campanasGrid, #reglasGrid, #paramsGrid")) setDirty(true);
+});
+
+document.addEventListener("click", (e) => {
+  const accion = e.target.closest("[data-action]");
+  if (!accion) return;
+  if (accion.dataset.action === "del-campana") eliminarCampana(accion);
+  if (accion.dataset.action === "del-regla") eliminarRegla(accion);
+});
+
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    if (!state.busy) ejecutar();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    if (!$("#modalGuardar").classList.contains("hidden")) guardarConfig();
+    else abrirModalGuardar();
+  }
+  if (e.key === "Escape") {
+    $("#modalGuardar").classList.add("hidden");
+    $("#modalParam").classList.add("hidden");
+  }
+});
+
+window.addEventListener("beforeunload", (e) => {
+  if (!state.dirty) return;
+  e.preventDefault();
+  e.returnValue = "";
+});
+
+/* ============================ init ============================ */
+async function init() {
+  try {
+    const [health, config] = await Promise.all([api("/api/health"), api("/api/config")]);
+    state.health = health;
+    state.datasets = config.datasets || [];
+    state.dataset = config.dataset || "demo";
+    setEngine(!!health.ortools);
+    aplicarConfig(config);
+    if (health.config_dir) state.configDir = health.config_dir;
+    renderMeta();
+    await cargarHistorial();
+    if (!health.ortools) {
+      toast("warn", "OR-Tools no instalado",
+        "Se usará la heurística de respaldo. Para el óptimo global: pip install ortools", 6500);
+    }
+  } catch (e) {
+    setEngine(null);
+    $("#enginePill").className = "chip bad";
+    $("#enginePill").querySelector("span:last-child").textContent = "Sin conexión";
+    $("#configPathChip").textContent = "config: sin conexión";
+    toast("error", "No se pudo conectar con el motor",
+      "Ejecute en una terminal: python claro_nexus.py serve --open", 9000);
+  }
+}
+
+window.nexus = state;
+init();
+</script>
+</body>
+</html>
